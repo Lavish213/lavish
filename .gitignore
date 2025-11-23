@@ -14,3 +14,9 @@ __pycache__/
 *.onnx
 vision extras/
 *.log
+.env
+*.env
+*.key
+*.h5
+*.pt
+*.onnx
