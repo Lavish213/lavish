@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2223.PNG",
+  "cache_key": "6a5236f02ac302e1a2b2fc20b0c959f73c3c645f",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:46 al) LTE @ ) < Posts thestockalley Ges. = thestockalley QaQQ @e) Invesco QQQ $574.55 © A $4.48 (0.78%) Today 24 Hour Market O27 Q V7 W thestockalley Take profits !¢) @ September 4 @ a 6H ¢",
+  "parsed": {},
+  "duration_sec": 5.594
+}

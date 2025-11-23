@@ -1,0 +1,388 @@
+# lavish_core/quant/math_engine.py
+# Pure-Python/Numpy/Pandas math for trade decisions:
+# - Indicators (RSI, MACD, ATR, Bollinger, Z-Score, Donchian, VWAP)
+# - Multi-model alpha: Momentum + MeanReversion + Volatility Regime + Breakout + Trend Filter
+# - Risk controls: volatility targeting, Kelly-lite, caps, cooldown
+# - Position sizing (cash-based or units), SL/TP suggestions, confidence scoring
+# - CLI: ingest OHLCV CSV and emit JSON decision for super_core
+
+from __future__ import annotations
+import os, sys, json, math, argparse, logging, uuid
+from dataclasses import dataclass
+from typing import Dict, Optional, Tuple
+import numpy as np
+import pandas as pd
+from datetime import datetime, timedelta
+
+logger = logging.getLogger("math_engine")
+logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
+if not logger.handlers:
+    h = logging.StreamHandler(sys.stdout)
+    h.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s"))
+    logger.addHandler(h)
+
+# ------------------------------- Utils -------------------------------
+
+def _rolling_z(x: pd.Series, win: int) -> pd.Series:
+    m = x.rolling(win).mean()
+    s = x.rolling(win).std(ddof=0)
+    return (x - m) / (s.replace(0, np.nan))
+
+def _ema(x: pd.Series, span: int) -> pd.Series:
+    return x.ewm(span=span, adjust=False).mean()
+
+def _safediv(a, b, eps=1e-12):
+    return a / (b + eps)
+
+def _nanfill(s: pd.Series, method="ffill"):
+    if method == "ffill":
+        return s.ffill().bfill()
+    return s.fillna(0)
+
+# ----------------------------- Indicators ----------------------------
+
+def rsi(close: pd.Series, period: int = 14) -> pd.Series:
+    delta = close.diff()
+    up = delta.clip(lower=0)
+    down = -delta.clip(upper=0)
+    rs = _ema(up, period) / _ema(down, period)
+    out = 100 - (100 / (1 + rs))
+    return out
+
+def macd(close: pd.Series, fast=12, slow=26, signal=9) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    macd_line = _ema(close, fast) - _ema(close, slow)
+    signal_line = _ema(macd_line, signal)
+    hist = macd_line - signal_line
+    return macd_line, signal_line, hist
+
+def atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> pd.Series:
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        (high - low),
+        (high - prev_close).abs(),
+        (low - prev_close).abs()
+    ], axis=1).max(axis=1)
+    return tr.ewm(alpha=1/period, adjust=False).mean()
+
+def bollinger(close: pd.Series, period: int = 20, n_std: float = 2.0) -> Tuple[pd.Series, pd.Series, pd.Series]:
+    mid = close.rolling(period).mean()
+    sd  = close.rolling(period).std(ddof=0)
+    upper = mid + n_std * sd
+    lower = mid - n_std * sd
+    return lower, mid, upper
+
+def donchian(high: pd.Series, low: pd.Series, period: int = 20) -> Tuple[pd.Series, pd.Series]:
+    upper = high.rolling(period).max()
+    lower = low.rolling(period).min()
+    return lower, upper
+
+def vwap(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 20) -> pd.Series:
+    typical = (high + low + close) / 3.0
+    pv = typical * volume
+    return pv.rolling(period).sum() / volume.rolling(period).sum()
+
+def returns(close: pd.Series) -> pd.Series:
+    return np.log(close).diff()
+
+# --------------------------- Feature Pack ----------------------------
+
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    df must contain: ts|time, open, high, low, close, volume
+    Adds columns used by models. All NaNs ffilled where sensible.
+    """
+    out = df.copy()
+    if "ts" not in out.columns and "time" in out.columns:
+        out["ts"] = pd.to_datetime(out["time"])
+    elif "ts" in out.columns:
+        out["ts"] = pd.to_datetime(out["ts"])
+    else:
+        out["ts"] = pd.date_range(end=datetime.utcnow(), periods=len(out), freq="T")
+    out = out.sort_values("ts").reset_index(drop=True)
+
+    # Basic returns
+    out["ret1"]  = returns(out["close"])
+    out["ret5"]  = np.log(out["close"]).diff(5)
+    out["ret20"] = np.log(out["close"]).diff(20)
+
+    # Indicators
+    out["rsi14"] = rsi(out["close"], 14)
+    m, sig, hist = macd(out["close"], 12, 26, 9)
+    out["macd"] = m
+    out["macd_sig"] = sig
+    out["macd_hist"] = hist
+
+    out["atr14"] = atr(out["high"], out["low"], out["close"], 14)
+    lb, mid, ub = bollinger(out["close"], 20, 2.0)
+    out["bb_low"], out["bb_mid"], out["bb_up"] = lb, mid, ub
+    dcl, dcu = donchian(out["high"], out["low"], 20)
+    out["don_low"], out["don_up"] = dcl, dcu
+
+    out["vwap20"] = vwap(out["high"], out["low"], out["close"], out["volume"].replace(0,np.nan), 20)
+    out["z_close_60"] = _rolling_z(out["close"], 60)
+    out["vol_20"] = out["ret1"].rolling(20).std(ddof=0)
+    out["vol_60"] = out["ret1"].rolling(60).std(ddof=0)
+
+    # Trend filters
+    out["ema20"] = _ema(out["close"], 20)
+    out["ema50"] = _ema(out["close"], 50)
+    out["ema100"] = _ema(out["close"], 100)
+
+    # Normalize rough edges
+    for c in ["rsi14","macd","macd_sig","macd_hist","atr14","bb_low","bb_mid","bb_up","don_low","don_up","vwap20",
+              "z_close_60","vol_20","vol_60","ema20","ema50","ema100","ret1","ret5","ret20"]:
+        out[c] = _nanfill(out[c])
+    return out
+
+# ------------------------ Alpha Model Ensemble -----------------------
+
+@dataclass
+class AlphaOutput:
+    bias: str           # "buy" / "sell" / "flat"
+    strength: float     # 0..1
+    confidence: float   # 0..1 (post risk)
+    reasons: Dict       # detail for logs
+
+def _sigmoid(x: float, k: float = 4.0) -> float:
+    return 1.0 / (1.0 + math.exp(-k * x))
+
+def alpha_momentum(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    # EMA trend slope + MACD alignment
+    last = fe.iloc[-1]
+    slope = (last["ema20"] - fe["ema20"].iloc[-5]) / (fe["ema20"].iloc[-5] + 1e-9)
+    macd_ok = 1.0 if last["macd"] > last["macd_sig"] else -1.0
+    score = 0.6 * slope + 0.4 * macd_ok * 0.2
+    return float(score), {"slope": slope, "macd_ok": macd_ok}
+
+def alpha_mean_reversion(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    last = fe.iloc[-1]
+    # Distance to Bollinger mid & RSI extremes
+    dist = _safediv((last["close"] - last["bb_mid"]), last["atr14"])
+    rsi_term = (50 - last["rsi14"]) / 50.0  # <0 oversold -> positive buy
+    score = -0.4 * dist + 0.6 * rsi_term
+    return float(score), {"dist_bbmid_atr": dist, "rsi_term": rsi_term}
+
+def alpha_breakout(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    last = fe.iloc[-1]
+    # Donchian breakout + BB upper/lower pierce
+    up_break = 1.0 if last["close"] >= last["don_up"] else 0.0
+    dn_break = 1.0 if last["close"] <= last["don_low"] else 0.0
+    bb_up_pierce = 1.0 if last["close"] >= last["bb_up"] else 0.0
+    bb_dn_pierce = 1.0 if last["close"] <= last["bb_low"] else 0.0
+    raw = up_break - dn_break + 0.5 * (bb_up_pierce - bb_dn_pierce)
+    score = raw
+    return float(score), {"up_break": up_break, "dn_break": dn_break, "bb_up": bb_up_pierce, "bb_dn": bb_dn_pierce}
+
+def alpha_vol_regime(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    last = fe.iloc[-1]
+    vrel = _safediv(last["vol_20"], fe["vol_60"].replace(0,np.nan).iloc[-1])
+    # Prefer moderate vol; too high -> risk off
+    sweet = math.exp(-((vrel - 1.0) ** 2) / (2 * 0.35**2))  # 0..1 bell
+    trend_ok = 1.0 if last["ema20"] > last["ema50"] > last["ema100"] else -0.5
+    score = 0.7 * (sweet - 0.5) + 0.3 * trend_ok * 0.5
+    return float(score), {"vrel": vrel, "sweet": sweet, "trend_ok": trend_ok}
+
+def alpha_trend_filter(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    last = fe.iloc[-1]
+    up = int(last["close"] > last["ema20"] > last["ema50"] > last["ema100"])
+    dn = int(last["close"] < last["ema20"] < last["ema50"] < last["ema100"])
+    score = up - dn  # 1/-1/0
+    return float(score), {"stack_up": bool(up), "stack_dn": bool(dn)}
+
+def ensemble_alpha(fe: pd.DataFrame) -> Tuple[float, Dict]:
+    s1, r1 = alpha_momentum(fe)
+    s2, r2 = alpha_mean_reversion(fe)
+    s3, r3 = alpha_breakout(fe)
+    s4, r4 = alpha_vol_regime(fe)
+    s5, r5 = alpha_trend_filter(fe)
+
+    # Weighted blend (tunable)
+    raw = 0.30*s1 + 0.25*s2 + 0.20*s3 + 0.15*s4 + 0.10*s5
+    # Squash to -1..1 range
+    raw = max(-1.5, min(1.5, raw)) / 1.5
+    details = {"momentum": r1, "mean_rev": r2, "breakout": r3, "vol_regime": r4, "trend_filter": r5, "raw": raw}
+    return float(raw), details
+
+# ----------------------------- Risk / Sizing --------------------------
+
+@dataclass
+class SizingParams:
+    cash: float = 10_000.0           # available cash
+    max_pos_pct: float = 0.20        # cap any single position % of cash
+    vol_target: float = 0.02         # daily vol target (2%)
+    atr_mult_sl: float = 2.0         # stop loss = 2*ATR
+    atr_mult_tp: float = 3.0         # take profit = 3*ATR
+    min_qty: float = 1.0
+    lot_step: float = 1.0            # round to whole shares by default
+
+def kelly_fraction(win_rate: float, payoff: float) -> float:
+    """
+    Kelly f* = p - (1-p)/b; clamp to [0,1]
+    """
+    p = max(0.0, min(1.0, win_rate))
+    b = max(1e-9, payoff)
+    f = p - (1 - p) / b
+    return max(0.0, min(1.0, f))
+
+def position_size(price: float, vol: float, params: SizingParams) -> float:
+    """
+    Volatility targeting position size: position notional = cash * (vol_target / max(vol, eps))
+    """
+    if price <= 0 or np.isnan(price):
+        return 0.0
+    v = max(1e-6, float(vol))
+    notional = params.cash * (params.vol_target / v)
+    notional = min(notional, params.cash * params.max_pos_pct)
+    qty = notional / price
+    # round to lot step
+    step = max(params.lot_step, params.min_qty)
+    qty = math.floor(qty / step) * step
+    return max(0.0, qty)
+
+def stops(price: float, atr_val: float, side: str, params: SizingParams) -> Tuple[float, float]:
+    if atr_val <= 0 or np.isnan(atr_val):
+        return (np.nan, np.nan)
+    if side == "buy":
+        sl = price - params.atr_mult_sl * atr_val
+        tp = price + params.atr_mult_tp * atr_val
+    else:
+        sl = price + params.atr_mult_sl * atr_val
+        tp = price - params.atr_mult_tp * atr_val
+    return (sl, tp)
+
+# ----------------------------- Decision ------------------------------
+
+def decide_from_df(df: pd.DataFrame, symbol: str, params: Optional[SizingParams] = None) -> AlphaOutput:
+    """
+    Core decision function. Input: raw OHLCV DataFrame.
+    Output: AlphaOutput (bias/strength/confidence + reasons).
+    """
+    params = params or SizingParams()
+    fe = build_features(df)
+    if len(fe) < 120:
+        # Not enough data for stable features
+        return AlphaOutput(bias="flat", strength=0.0, confidence=0.0, reasons={"error":"insufficient_data"})
+
+    raw, details = ensemble_alpha(fe)
+    # raw in [-1,1]; map to bias
+    bias = "buy" if raw > 0.10 else "sell" if raw < -0.10 else "flat"
+    strength = abs(raw)
+
+    last = fe.iloc[-1]
+    px = float(last["close"])
+    vol = float(last["vol_20"])
+    atrv = float(last["atr14"])
+
+    # Kelly-lite (estimate p and b heuristically from strength & volatility)
+    est_p = 0.45 + 0.5 * strength   # 0.45 .. 0.95
+    est_b = 1.5                     # payoff ratio guess
+    kf = kelly_fraction(est_p, est_b)
+    # Confidence combines strength, trend stack, and vol "sweetness"
+    trend_stack = 1.0 if (last["ema20"] > last["ema50"] > last["ema100"]) else 0.0
+    conf = 0.5*strength + 0.3*kf + 0.2*(details["vol_regime"]["sweet"])
+
+    reasons = {
+        "raw_alpha": raw,
+        "kelly_frac": kf,
+        "trend_stack": trend_stack,
+        "est_win": est_p,
+        "vol_sweet": details["vol_regime"]["sweet"],
+        "symbol": symbol,
+        "price": px,
+        "vol20": vol,
+        "atr14": atrv,
+        **details
+    }
+
+    return AlphaOutput(bias=bias, strength=float(strength), confidence=float(max(0.0, min(1.0, conf))), reasons=reasons)
+
+def size_and_risk(alpha: AlphaOutput, price: float, vol: float, atrv: float, params: SizingParams) -> Dict:
+    if alpha.bias == "flat" or price <= 0:
+        return {"qty": 0.0, "side": "flat", "sl": np.nan, "tp": np.nan, "notional": 0.0}
+    qty = position_size(price, vol=vol, params=params)
+    if qty <= 0:
+        return {"qty": 0.0, "side": "flat", "sl": np.nan, "tp": np.nan, "notional": 0.0}
+    side = "buy" if alpha.bias == "buy" else "sell"
+    sl, tp = stops(price, atrv, side, params)
+    return {"qty": float(qty), "side": side, "sl": float(sl), "tp": float(tp), "notional": float(qty*price)}
+
+# ------------------------------ CLI ----------------------------------
+
+def _load_csv(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    cols = [c.lower() for c in df.columns]
+    df.columns = cols
+    # Flexible column names
+    rename = {}
+    if "timestamp" in cols and "ts" not in cols: rename["timestamp"] = "ts"
+    if "time" in cols and "ts" not in cols: rename["time"] = "ts"
+    if "o" in cols: rename["o"] = "open"
+    if "h" in cols: rename["h"] = "high"
+    if "l" in cols: rename["l"] = "low"
+    if "c" in cols: rename["c"] = "close"
+    if "v" in cols: rename["v"] = "volume"
+    df = df.rename(columns=rename)
+    req = {"open","high","low","close","volume"}
+    missing = req - set(df.columns)
+    if missing:
+        raise ValueError(f"CSV missing {missing}. Need columns: {req} (ts optional).")
+    return df
+
+def run_on_csv(path: str, symbol: str, cash: float, risk: str, vol_target: float) -> Dict:
+    df = _load_csv(path)
+    # risk presets
+    sp = SizingParams(
+        cash=cash,
+        max_pos_pct = 0.10 if risk=="low" else 0.20 if risk=="normal" else 0.35,
+        vol_target = vol_target if vol_target>0 else (0.015 if risk=="low" else 0.02 if risk=="normal" else 0.03),
+        atr_mult_sl = 2.5 if risk=="low" else 2.0 if risk=="normal" else 1.7,
+        atr_mult_tp = 3.0 if risk=="low" else 3.2 if risk=="normal" else 2.8,
+        min_qty=1.0,
+        lot_step=1.0
+    )
+    alpha = decide_from_df(df, symbol, params=sp)
+    last = build_features(df).iloc[-1]
+    px, vol, atrv = float(last["close"]), float(last["vol_20"]), float(last["atr14"])
+    riskpack = size_and_risk(alpha, px, vol, atrv, sp)
+
+    # Final confidence gate (maps to super_core default threshold ~0.65)
+    conf = alpha.confidence
+    out = {
+        "symbol": symbol.upper(),
+        "bias": alpha.bias,
+        "confidence": round(float(conf), 4),
+        "strength": round(float(alpha.strength), 4),
+        "qty": round(float(riskpack["qty"]), 6),
+        "side": riskpack["side"],
+        "price": round(px, 6),
+        "notional": round(float(riskpack["notional"]), 2),
+        "stop_loss": riskpack["sl"],
+        "take_profit": riskpack["tp"],
+        "reasons": alpha.reasons,
+        "id": str(uuid.uuid4()),
+        "ts_utc": datetime.utcnow().isoformat()
+    }
+    return out
+
+def main():
+    p = argparse.ArgumentParser(description="Lavish Quant Math Engine")
+    p.add_argument("--csv", required=True, help="Path to OHLCV CSV (cols: ts?, open, high, low, close, volume)")
+    p.add_argument("--symbol", required=True, help="Ticker symbol, e.g. AAPL")
+    p.add_argument("--cash", type=float, default=10000.0, help="Available cash for sizing")
+    p.add_argument("--risk", type=str, default=os.getenv("RISK_MODE","normal"), choices=["low","normal","high"], help="Risk preset")
+    p.add_argument("--vol_target", type=float, default=0.0, help="Override daily vol target (0->preset)")
+    p.add_argument("--pretty", action="store_true", help="Pretty-print JSON")
+    args = p.parse_args()
+
+    try:
+        out = run_on_csv(args.csv, args.symbol, args.cash, args.risk, args.vol_target)
+        if args.pretty:
+            print(json.dumps(out, indent=2))
+        else:
+            print(json.dumps(out))
+    except Exception as e:
+        logger.error(f"Math engine failed: {e}")
+        raise
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2091.PNG",
+  "cache_key": "dc07600cf87ef257e6bec29f42560b71d0ca8146",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 ot) 5G+ < Posts thestockalley 92Q V7 W thestockalley Last trade of the day. It's slow so far. Link in bio. If it runs up before the close, sell it. We have until Jan to eat. 3 hours ago O22 Q V1 W thestockalley Swing trade already up 81%¥45 HW HOA 2 days ago @& thestockalley $379.22 | 34.459 OB Q V7 W thestockalley Last trade of the day already up 34% ... 3 days ago @& thestockalley",
+  "parsed": {},
+  "duration_sec": 9.025
+}

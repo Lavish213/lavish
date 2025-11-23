@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2130.PNG",
+  "cache_key": "2d5fc8050b38586394ff8abeff0cd0df907274d6",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 etl 5G+ ) < Posts thestockalley &% thestockalley we thestockalley @ The Stock Alley Home Posts Shop Trade for earnings Just now Risky trade option @20 V5 thestockalley | have a trade option for earnings tc It's about $1.75 a contract. | don't have any inside information for earnings, so it’s 50/50... more Comments are off. Review controls. 21 hours ago O37 Q V2 W thestockalley Earnings trade hit, you can take profits whenever you want. Don't lose it. @ 6",
+  "parsed": {},
+  "duration_sec": 7.353
+}

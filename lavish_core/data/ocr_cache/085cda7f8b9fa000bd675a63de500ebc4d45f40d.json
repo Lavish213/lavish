@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2201 2.PNG",
+  "cache_key": "085cda7f8b9fa000bd675a63de500ebc4d45f40d",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "oll LTE © < Posts thestockalley September 11 &% thestockalley Cheap trade The Stock Alley Just now New Unlock with membership Buy post $25 O27 Q2 V1 W thestockalley Cheap trade. Less than $50 a contract. Link in bio. Let's ride ¢) September 11 G&% thestockalley CART Instacart (Maplebear Inc.) $47.16 ©",
+  "parsed": {},
+  "duration_sec": 8.101
+}

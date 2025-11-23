@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2183.PNG",
+  "cache_key": "7c6005b854d62c6750f1f73244c5f9e0ba084a8b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 all LTE @ ) < Posts thestockalley & September 17 &% thestockalley Or QV A thestockalley Tesla trade up ¢y September 16 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 6.353
+}

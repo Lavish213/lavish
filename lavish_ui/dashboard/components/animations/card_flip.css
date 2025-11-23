@@ -1,0 +1,29 @@
+/* dashboard/components/animations/card_flip.css */
+
+.card-flip-shell {
+  position: relative;
+  perspective: 1200px;
+}
+
+.card-flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease-out;
+}
+
+.card-flip-front,
+.card-flip-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.card-flip-back {
+  transform: rotateY(180deg);
+}
+
+.card-flip-shell:hover .card-flip {
+  transform: rotateY(180deg);
+}

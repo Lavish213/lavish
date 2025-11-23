@@ -1,0 +1,288 @@
+/* lavish_ui/intro/intro.css */
+
+@import url("/shared/base.css");
+@import url("/shared/animations.css");
+@import url("/shared/lighting.css");
+
+/* Fullscreen intro body */
+.lavish-intro-body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #050713 0, #020308 45%, #000 100%);
+  color: var(--lavish-text-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Matrix canvas in the back */
+.matrix-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.32;
+  mix-blend-mode: screen;
+}
+
+/* Overlay layout */
+.intro-overlay {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 960px;
+  padding: 32px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Header */
+.intro-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lavish-text-soft);
+}
+
+.intro-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.5));
+}
+
+.intro-env-pill {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.9));
+  color: #e0f2fe;
+}
+
+/* Center block */
+.intro-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+/* Single luxury LAVISH */
+.intro-logo {
+  margin: 0;
+  position: relative;
+}
+
+.intro-logo-text {
+  display: inline-block;
+  font-family: "Orbitron", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  font-size: clamp(40px, 7vw, 76px);
+  text-transform: uppercase;
+  text-align: center;
+
+  /* gradient gold text */
+  background-image: linear-gradient(
+    120deg,
+    #f6c15c 0%,
+    #ffd88b 20%,
+    #fff5cf 50%,
+    #f6c15c 80%,
+    #b98c37 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+
+  /* breathing + shimmer combo */
+  animation:
+    lavish-logo-breathe 5s ease-in-out infinite,
+    lavish-gold-sweep 2.1s cubic-bezier(0.33, 0.0, 0.2, 1) 0.4s 3;
+  text-shadow:
+    0 0 16px rgba(246, 193, 92, 0.6),
+    0 0 36px rgba(246, 193, 92, 0.4);
+}
+
+/* Sub tagline */
+.intro-tagline {
+  margin: 4px 0 0;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lavish-text-soft);
+}
+
+/* Loading row */
+.intro-loading-row {
+  width: 100%;
+  margin-top: 26px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.intro-progress-shell {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.9);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
+}
+
+.intro-progress-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background-image: linear-gradient(
+    90deg,
+    rgba(246, 193, 92, 0.2),
+    rgba(246, 193, 92, 0.9),
+    rgba(45, 222, 152, 0.7)
+  );
+  background-size: 180% 100%;
+  box-shadow: 0 0 16px rgba(246, 193, 92, 0.8);
+  transform-origin: left center;
+}
+
+.intro-progress-label {
+  min-width: 160px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  color: var(--lavish-text-soft);
+}
+
+/* Status chips */
+.intro-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.status-chip {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), rgba(15, 23, 42, 0.6));
+}
+
+.status-chip-online {
+  border-color: rgba(34, 197, 94, 0.7);
+  color: #bbf7d0;
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.4);
+}
+
+.status-chip-muted {
+  color: var(--lavish-text-muted);
+}
+
+/* Enter button */
+.intro-enter-btn {
+  margin-top: 26px;
+  padding-inline: 20px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  animation: lavish-fade-in 480ms ease-out 0.8s both;
+}
+
+.intro-enter-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* Footer */
+.intro-footer {
+  margin-top: 32px;
+  font-size: 11px;
+  color: var(--lavish-text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Fade out on exit */
+.intro-exit {
+  opacity: 0;
+  transform: translateY(10px);
+  filter: blur(2px);
+  transition: opacity 280ms ease-out, transform 280ms ease-out, filter 280ms ease-out;
+}
+
+/* Animations */
+
+@keyframes lavish-logo-breathe {
+  0% {
+    transform: scale(1);
+    text-shadow:
+      0 0 10px rgba(246, 193, 92, 0.4),
+      0 0 26px rgba(246, 193, 92, 0.3);
+  }
+  50% {
+    transform: scale(1.04);
+    text-shadow:
+      0 0 18px rgba(246, 193, 92, 0.8),
+      0 0 40px rgba(246, 193, 92, 0.7);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow:
+      0 0 10px rgba(246, 193, 92, 0.4),
+      0 0 26px rgba(246, 193, 92, 0.3);
+  }
+}
+
+@keyframes lavish-gold-sweep {
+  0% {
+    background-position: 0% 50%;
+  }
+  45% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Small screens */
+@media (max-width: 640px) {
+  .intro-overlay {
+    padding: 20px 16px 18px;
+  }
+
+  .intro-header {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .intro-loading-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .intro-progress-label {
+    text-align: left;
+  }
+
+  .intro-tagline {
+    text-align: center;
+    line-height: 1.5;
+  }
+}

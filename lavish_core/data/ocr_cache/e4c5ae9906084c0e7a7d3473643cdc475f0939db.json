@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2206.PNG",
+  "cache_key": "e4c5ae9906084c0e7a7d3473643cdc475f0939db",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © _) < Posts thestockalley VSVUCIIINT! 1U &% thestockalley CoreWeave $110.00 ® A $9.78 (9.76%) Pre-market 24 Hour Market SPY SPDR S&P 500 ETF $653.81 ® A $3.48 (0.54%) Pre-market 24 Hour Market O2Q V2 W thestockalley Both hit. Take profits September 10 G&% thestockalley Robinhood Markets M@ Q O s",
+  "parsed": {},
+  "duration_sec": 2.812
+}

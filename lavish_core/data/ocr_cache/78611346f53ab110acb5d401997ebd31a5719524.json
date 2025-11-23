@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2080.PNG",
+  "cache_key": "78611346f53ab110acb5d401997ebd31a5719524",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 ot) 5G+ < Posts thestockalley O22 Qu W122 thestockalley It's time fp 20 hours ago @& thestockalley O2%Q V W thestockalley Cheap trade closed green &) & & & & 1 day ago @& thestockalley * $1,144.19 | 27.8",
+  "parsed": {},
+  "duration_sec": 6.564
+}

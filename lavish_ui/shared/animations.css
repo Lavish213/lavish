@@ -1,0 +1,59 @@
+/* shared/animations.css
+   Global motion utilities + intro shimmer
+*/
+
+@import url("./base.css");
+
+/* Soft float for icons / pills */
+
+@keyframes lavish-float-soft {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Gold pulse (e.g., for mode pill) */
+
+@keyframes lavish-pulse-gold {
+  0% { box-shadow: 0 0 0 0 rgba(246, 193, 92, 0.6); }
+  100% { box-shadow: 0 0 0 18px rgba(246, 193, 92, 0); }
+}
+
+/* Generic fade-in */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0px); }
+}
+
+.fade-in {
+  animation: fadeIn 0.7s ease-out forwards;
+}
+
+/* Intro logo shimmer */
+
+@keyframes lavish-gold-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.intro-lavish-fill {
+  background: linear-gradient(120deg, #f4c15d, #fdf6e3, #f4c15d);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lavish-gold-flow 3.8s ease-in-out infinite;
+  text-shadow: 0 0 22px rgba(244, 193, 93, 0.75);
+}
+
+/* Reduced motion safety */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

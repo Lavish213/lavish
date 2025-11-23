@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2161.PNG",
+  "cache_key": "60a6f2cb95032345d90754048ff337a510946160",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 oo) LTE @ < Posts thestockalley LIIGQLYUONAGIGY 1 vo CHINGINGU VII WITTY TIly HIG VW VUUN centered around the stock market. | plan to share my insights, experiences, and strategies with everyone... more September 23 &% thestockalley Ow Q17 A tng stockalley Our long term trade up 73% now ¥/ f/ September 23 &% thestockalley @ @Q 6",
+  "parsed": {},
+  "duration_sec": 7.165
+}

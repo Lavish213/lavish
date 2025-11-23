@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2438 2.PNG",
+  "hash": "9efa7f8f2c30d48dd41e3e41222f06bbf32ff0ee",
+  "text_excerpt": "< Posts\n\nthestockalley\n\nGes. = thestockalley\n\n@y MSTIR$ =\na\n\nOpen P&L(USD) @\n+7,202.50 +121.46%\n\nO36 Q2 V3\n\nthestockalley Some cry and some buy @@\nJuly 2\nGes. = thestockalley\n\nMSTR\n\nMicroStrategy\nmM Q ©\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.9,
+    "ref_price": 7.0
+  },
+  "created_at": "2025-11-02T12:46:58.052527Z"
+}

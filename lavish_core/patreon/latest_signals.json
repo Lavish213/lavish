@@ -1,0 +1,26 @@
+{
+  "NVDA": {
+    "symbol": "NVDA",
+    "action": "buy",
+    "confidence": 0.9,
+    "price": 457.0,
+    "timestamp": "2025-10-26T12:19:16.929572+00:00",
+    "source": "patreon"
+  },
+  "TSLA": {
+    "symbol": "TSLA",
+    "action": "sell",
+    "confidence": 0.75,
+    "price": 250.0,
+    "timestamp": "2025-10-26T12:19:16.929705+00:00",
+    "source": "patreon"
+  },
+  "AAPL": {
+    "symbol": "AAPL",
+    "action": "hold",
+    "confidence": 0.45,
+    "price": 185.0,
+    "timestamp": "2025-10-26T12:19:16.929707+00:00",
+    "source": "patreon"
+  }
+}

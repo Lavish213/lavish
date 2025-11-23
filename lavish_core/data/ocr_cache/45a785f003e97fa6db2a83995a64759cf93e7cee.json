@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2199.PNG",
+  "cache_key": "45a785f003e97fa6db2a83995a64759cf93e7cee",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ll LTE < Posts thestockalley Cheap trade The Stock Alley Just now New Unlock with membership Buy post $25 Ora V W thestockalley Cheap trade. Less than $50 a contract. Link in bio. Let's ride @ O42 Q3 V1 W thestockalley Flipped your Investment September 11 ge thestockalley RIOT Riot Platforms $16.75 @ m@ Q o",
+  "parsed": {},
+  "duration_sec": 8.928
+}

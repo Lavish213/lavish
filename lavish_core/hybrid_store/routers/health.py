@@ -1,0 +1,129 @@
+from sqlalchemy.orm import Session
+from typing import Optional, Dict, Any
+from datetime import datetime, timezone
+import csv
+
+from ..config import get_settings
+from ..models.order import Order
+from ..models.position import Position
+from ..models.account import Account
+from ..utils.logger import get_logger
+from ..utils.fs import ensure_parent
+from .alpaca_client import AlpacaClient
+
+log = get_logger("orders")
+settings = get_settings()
+
+def _csv_append(path, row: Dict[str, Any]):
+    ensure_parent(path)
+    write_header = not path.exists()
+    with path.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if write_header:
+            w.writeheader()
+        w.writerow(row)
+
+def place_order(db: Session, *, symbol: str, side: str, qty: Optional[float], notional: Optional[float],
+                type: str, time_in_force: str, limit_price: Optional[float], stop_price: Optional[float],
+                client_order_id: Optional[str], comment: Optional[str]) -> Order:
+    mode = settings.TRADE_MODE
+    order = Order(
+        symbol=symbol.upper(), side=side.lower(),
+        qty=qty or 0.0, notional=notional, type=type, time_in_force=time_in_force,
+        limit_price=limit_price, stop_price=stop_price, client_order_id=client_order_id,
+        status="accepted", mode=mode, comment=comment
+    )
+    db.add(order)
+    db.commit()
+    db.refresh(order)
+
+    # CSV audit
+    _csv_append(settings.CSV_ORDERS, {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "mode": mode, "symbol": symbol.upper(), "side": side.lower(),
+        "qty": qty or "", "notional": notional or "", "type": type,
+        "limit_price": limit_price or "", "stop_price": stop_price or "",
+        "tif": time_in_force, "client_order_id": client_order_id or "", "comment": comment or ""
+    })
+
+    if mode == "dry-run":
+        log.info("[DRY] %s %s qty=%s notional=%s", side.upper(), symbol.upper(), qty, notional)
+        return order
+
+    # Paper/live via Alpaca
+    alpaca = AlpacaClient()
+    try:
+        res = alpaca.submit_order(
+            symbol=symbol, side=side, qty=qty, notional=notional, type=type,
+            time_in_force=time_in_force, limit_price=limit_price, stop_price=stop_price,
+            client_order_id=client_order_id
+        )
+        order.status = res.get("status", "accepted")
+        order.raw_response = res
+        if order.status == "filled":
+            order.filled_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(order)
+    except Exception as e:
+        log.exception("Order failed: %s", e)
+        order.status = "rejected"
+        order.error = str(e)
+        db.commit()
+        db.refresh(order)
+
+    # Soft position sync (approx)
+    try:
+        _soft_sync_positions(db)
+    except Exception:
+        log.exception("position sync failed (soft)")
+
+    # Soft account sync
+    try:
+        _soft_sync_account(db)
+    except Exception:
+        log.exception("account sync failed (soft)")
+
+    return order
+
+def list_orders(db: Session, limit: int = 100):
+    return db.query(Order).order_by(Order.placed_at.desc()).limit(limit).all()
+
+def _soft_sync_positions(db: Session):
+    if settings.TRADE_MODE == "dry-run":
+        return
+    alpaca = AlpacaClient()
+    res = alpaca.get_positions()
+    # simple reconcile: upsert by symbol
+    seen = set()
+    for p in res:
+        sym = p["symbol"]
+        seen.add(sym)
+        qty = float(p.get("qty", 0))
+        avg = float(p.get("avg_entry_price", 0)) if p.get("avg_entry_price") else 0.0
+        mkt = float(p.get("current_price", 0)) if p.get("current_price") else None
+        val = float(p.get("market_value", 0)) if p.get("market_value") else None
+        pos = db.query(Position).filter(Position.symbol == sym).first()
+        if not pos:
+            pos = Position(symbol=sym, qty=qty, avg_price=avg, market_price=mkt, value=val)
+            db.add(pos)
+        else:
+            pos.qty = qty
+            pos.avg_price = avg
+            pos.market_price = mkt
+            pos.value = val
+    db.commit()
+
+def _soft_sync_account(db: Session):
+    if settings.TRADE_MODE == "dry-run":
+        return
+    alpaca = AlpacaClient()
+    a = alpaca.get_account()
+    acc = db.query(Account).first()
+    if not acc:
+        acc = Account(mode=settings.TRADE_MODE, buying_power=float(a.get("buying_power", 0)), equity=float(a.get("equity", 0)))
+        db.add(acc)
+    else:
+        acc.mode = settings.TRADE_MODE
+        acc.buying_power = float(a.get("buying_power", 0))
+        acc.equity = float(a.get("equity", 0))
+    db.commit()

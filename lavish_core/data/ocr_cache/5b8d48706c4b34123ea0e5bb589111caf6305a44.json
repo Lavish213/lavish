@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2122.PNG",
+  "cache_key": "5b8d48706c4b34123ea0e5bb589111caf6305a44",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G OC ) < Posts thestockalley Vvuewwner &% thestockalley Nike $73.34 ® A $3.61 (5.18%) Pre-market 24 Hour Market O#8 Q1 73 W thestockalley Shoutout to the 8 people who supported this trade. You're up. You can sell at the bell. @ 6",
+  "parsed": {},
+  "duration_sec": 1.884
+}

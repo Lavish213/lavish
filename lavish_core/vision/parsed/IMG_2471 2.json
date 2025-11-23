@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2471 2.PNG",
+  "hash": "dc5f98855914117bf7786074d4806b8a68022d2a",
+  "text_excerpt": "< Posts\nthestockalley\n\nO42 Qa V1 W\n\nthestockalley And that’s why we buy the dip\nJune 23\n\n&% thestockalley\n\nO52 Q2 a a 7 [A\n\nthestockalley #Tesla has released their #robotaxi today\n\nJune 22\n\n&% thestockalley\n\nTSLA\n\nan ee\n\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.9,
+    "ref_price": 42.0
+  },
+  "created_at": "2025-11-02T12:47:16.760121Z"
+}

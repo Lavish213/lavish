@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2458 2.PNG",
+  "hash": "86969f6aaf26244d17e2b6b85f74c1bbfe340eed",
+  "text_excerpt": "< Posts\nthestockalley\n\n&% thestockalley\n\nSPY\n\nSPDR S&P 500 ETF\n$612.70 ©\n\nA $0.83 (0.14%) Today\n24 Hour Market i\n\nO27 QV W\n\nthestockalley Take profits here on spy &\nJune 27\n\n@ @Q 6 s\n\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.65,
+    "ref_price": 500.0
+  },
+  "created_at": "2025-11-02T12:47:08.893219Z"
+}

@@ -1,0 +1,222 @@
+/* shared/base.css
+   Core tokens, reset, surfaces, buttons, pills
+*/
+
+@import url("./fonts.css");
+
+:root {
+  /* Palette */
+  --lavish-bg: #040509;
+  --lavish-bg-soft: #090b12;
+  --lavish-bg-elevated: #101321;
+
+  --lavish-gold: #f6c15c;
+  --lavish-gold-soft: rgba(246, 193, 92, 0.25);
+  --lavish-gold-strong: #ffd88b;
+
+  --lavish-green: #2dde98;
+  --lavish-green-soft: rgba(45, 222, 152, 0.28);
+  --lavish-red: #ff4c6a;
+  --lavish-red-soft: rgba(255, 76, 106, 0.28);
+
+  --lavish-text-main: #f5f5f7;
+  --lavish-text-soft: #a2a8c8;
+  --lavish-text-muted: #707799;
+
+  --lavish-border-subtle: rgba(255, 255, 255, 0.04);
+  --lavish-border-strong: rgba(246, 193, 92, 0.45);
+
+  --lavish-radius-card: 18px;
+  --lavish-radius-pill: 999px;
+
+  --lavish-shadow-soft: 0 18px 45px rgba(0, 0, 0, 0.6);
+  --lavish-shadow-gold: 0 0 24px rgba(246, 193, 92, 0.4);
+  --lavish-shadow-green: 0 0 20px rgba(45, 222, 152, 0.35);
+
+  --lavish-transition-fast: 160ms ease-out;
+  --lavish-transition-med: 260ms ease-out;
+
+  --lavish-nav-width: 76px;
+}
+
+/* Reset */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+body.lavish-body {
+  background: radial-gradient(circle at top, #181c2a 0, #05060a 45%, #020309 100%);
+  color: var(--lavish-text-main);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Scrollbars */
+
+body::-webkit-scrollbar {
+  width: 8px;
+}
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+body::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to bottom,
+    var(--lavish-gold-soft),
+    var(--lavish-green-soft)
+  );
+  border-radius: 999px;
+}
+
+/* Basic links */
+
+a {
+  color: var(--lavish-gold-strong);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Cards */
+
+.card,
+.lavish-card {
+  background:
+    radial-gradient(circle at top left, rgba(246, 193, 92, 0.06), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(45, 222, 152, 0.05), transparent 70%),
+    linear-gradient(145deg, #0a0c15, #07080f);
+  border-radius: var(--lavish-radius-card);
+  border: 1px solid var(--lavish-border-subtle);
+  box-shadow: var(--lavish-shadow-soft);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before,
+.lavish-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(246, 193, 92, 0.1), transparent 55%);
+  mix-blend-mode: soft-light;
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.card-title {
+  font-family: var(--lavish-font-display);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.card-body {
+  font-size: 13px;
+  color: var(--lavish-text-soft);
+}
+
+/* Pills */
+
+.meta-chip,
+.lavish-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--lavish-radius-pill);
+  border: 1px solid var(--lavish-border-subtle);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lavish-text-soft);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 60%);
+}
+
+.meta-chip-gold {
+  border-color: var(--lavish-gold-soft);
+  color: var(--lavish-gold-strong);
+}
+.meta-chip-neutral {
+  border-color: rgba(148, 163, 184, 0.45);
+}
+
+/* Buttons */
+
+.lavish-btn,
+button.nav-item,
+.pill-button,
+.sidebar-logout-btn {
+  border-radius: var(--lavish-radius-pill);
+  border: 1px solid var(--lavish-border-subtle);
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #131628, #090b15);
+  color: var(--lavish-text-main);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  cursor: pointer;
+  transition:
+    background var(--lavish-transition-med),
+    transform var(--lavish-transition-fast),
+    box-shadow var(--lavish-transition-fast),
+    border-color var(--lavish-transition-fast);
+}
+
+.lavish-btn:hover,
+button.nav-item:hover,
+.pill-button:hover,
+.sidebar-logout-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--lavish-gold-soft);
+  box-shadow: var(--lavish-shadow-gold);
+}
+
+.lavish-btn-primary,
+.lavish-btn-gold {
+  background: linear-gradient(135deg, #f6c15c, #ffdf9b);
+  color: #120a03;
+  box-shadow: var(--lavish-shadow-gold);
+}
+
+.lavish-btn-primary:hover,
+.lavish-btn-gold:hover {
+  box-shadow: 0 0 27px rgba(246, 193, 92, 0.8);
+}
+
+/* Text utilities */
+
+.text-soft { color: var(--lavish-text-soft); }
+.text-muted { color: var(--lavish-text-muted); }
+.text-gold { color: var(--lavish-gold-strong); }
+.text-green { color: var(--lavish-green); }
+.text-red { color: var(--lavish-red); }
+
+/* Clock + mono */
+
+.lavish-clock {
+  font-family: var(--lavish-font-mono);
+  font-size: 12px;
+}

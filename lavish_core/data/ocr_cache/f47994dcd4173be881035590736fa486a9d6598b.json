@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2174.PNG",
+  "cache_key": "f47994dcd4173be881035590736fa486a9d6598b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 etl LTE ' < Posts thestockalley O27 Q5 7 W thestockalley | loaded up on this trade. We have two years left. Don't miss it. It's still cheap. Link in bio September 22 @& thestockalley $ The Stock Alley Home Posts Shop Trade for today, it could squeeze soon New Just now O73 Q2 7 W thestockalley Link in bio September 22 @& thestockalley @ Q 6 ¢",
+  "parsed": {},
+  "duration_sec": 7.653
+}

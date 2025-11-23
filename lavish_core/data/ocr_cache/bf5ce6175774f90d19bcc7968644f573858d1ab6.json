@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2087 2.PNG",
+  "cache_key": "bf5ce6175774f90d19bcc7968644f573858d1ab6",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 a) 5G+ @ ) < Posts thestockalley AppLovin $564.00 © V $95.99 (14.06%) Today V $22.77 (3.88%) After-hours W2Q V7 A thestockalley We sold just in time . The SEC hit them with an investigation for sharing user data. SMH. I'll be looking to get back in around $446-455.00. 2 days ago Gs, = thestockalley @ @Q 6",
+  "parsed": {},
+  "duration_sec": 6.963
+}

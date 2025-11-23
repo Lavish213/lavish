@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2205.PNG",
+  "cache_key": "d185395adc3c739c1e053ac9272c7ba56ad1df33",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © < Posts thestockalley 107 Q2 V2 thestockalley Congrats sis @) ¢ ¢) September 10 Cheap trade @ The Stock Alley Just now Ona Vi thestockalley Cheap trade available. Link in bio September 10 CRWV CoreWeave $110.00 © A $9.78 (9.76%) Pre-market 24 Hour Market @ 6",
+  "parsed": {},
+  "duration_sec": 8.561
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2109.PNG",
+  "cache_key": "305e76bbd19bab98e5b622e8cfb98c9e90d708c0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley POYUT70 VI LUTIILIGULDS TUE VPIUIIL dilU Hue UI Fest VUL. October 1 &% thestockalley If you hit on the spy trade, your week should be done. Enjoy your weekend. O% Q2 V1 W thestockalley Spy climbed up almost $7 from our entry today GOHOS October 1 Ge. ~thestockalley",
+  "parsed": {},
+  "duration_sec": 7.491
+}

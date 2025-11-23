@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2132.PNG",
+  "cache_key": "a4d7f3d62b90b8f85b73bd87fdcfdc3a9af12318",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © < Posts thestockalley 2 Q6 Vs A thestockalley Money has been made. You're welcome. September 29 &% thestockalley @#& thestockalley @ The Stock Alley Home Posts Shop Trade for earnings Just now Risky trade option Mis V5 W thestockalley | have a trade option for earnings today. It's about $1.75 a contract. | don’t have any inside information for earnings, so it's 50/50... more Comments are off. Review controls. 3 hours ago Ox Q1 V7 W thestockalley Swing trade in the green before the close. Earnings are today. You either take profits now or hold it and risk it all. Good luck! September 29 @ 6",
+  "parsed": {},
+  "duration_sec": 2.685
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2198.PNG",
+  "cache_key": "8dd5774df4b36e4d6f8b161f23369904056db07e",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © < Posts thestockalley $1,296.00 O40 Q3 V1 thestockalley Flipped your Investment & September 11 RIOT Riot Platforms $16.75 @ @ 6",
+  "parsed": {},
+  "duration_sec": 8.648
+}

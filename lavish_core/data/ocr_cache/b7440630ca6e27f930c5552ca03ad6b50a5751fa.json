@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2108 2.PNG",
+  "cache_key": "b7440630ca6e27f930c5552ca03ad6b50a5751fa",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "Posts thestockalley META Meta Platforms Today $6.00 (0.84%) Overnight O4Q V2 W thestockalley Meta trade closed green today and currently up $6.00 in after hours. Our target is $729.00 then we sell $85% of contracts for profit and ride the rest out. October 1 Rn |",
+  "parsed": {},
+  "duration_sec": 7.823
+}

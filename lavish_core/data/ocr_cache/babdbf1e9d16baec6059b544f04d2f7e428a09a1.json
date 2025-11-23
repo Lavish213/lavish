@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2129.PNG",
+  "cache_key": "babdbf1e9d16baec6059b544f04d2f7e428a09a1",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G (| ) < Posts thestockalley Progress Software @ $46.51 © A $3.90 (9.15%) Today 24 Hour Market O37 Q V2 W thestockalley Earnings trade hit, you can take profits whenever you want. Don't lose it. September 30 fr thactanLlallaw @ a oe s",
+  "parsed": {},
+  "duration_sec": 2.196
+}

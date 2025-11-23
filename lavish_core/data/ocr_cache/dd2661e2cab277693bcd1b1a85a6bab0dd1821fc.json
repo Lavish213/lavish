@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2152.PNG",
+  "cache_key": "dd2661e2cab277693bcd1b1a85a6bab0dd1821fc",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 al) LTE @ ) < Posts thestockalley * $2,913.46 | 29.23% Or Q7 V3 W thestockalley Wow . Swings got cooked but last trade of the week said watch this ... dy @) &) & & September 24",
+  "parsed": {},
+  "duration_sec": 6.742
+}

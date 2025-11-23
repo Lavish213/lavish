@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2226.PNG",
+  "cache_key": "0db76a0daf2a250dcae74c57128e33c0956cb975",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:46 al) LTE @) < Posts thestockalley @& thestockalley This stock has a buy signal and options are affordable. The Stock Alley August 11 Gis 7 W thestockalley The long-term option is up, and there's still time to get in. It’s still cheap. Link in bio if you haven't gotten in. Comments are off. Review controls. 13 hours ago OV September 4 @& thestockalley ay Q G) S",
+  "parsed": {},
+  "duration_sec": 4.894
+}

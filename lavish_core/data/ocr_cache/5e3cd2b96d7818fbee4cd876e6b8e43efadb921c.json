@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2175.PNG",
+  "cache_key": "5e3cd2b96d7818fbee4cd876e6b8e43efadb921c",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © ) < Posts thestockalley -a gy eee ee ee September 22 &% thestockalley ®% thestockalley Swing trade available $1,145.86 | 73.739 923Q'1V7 thestockalley Link in bio 10 minutes ago Oas Qi YW W thestockalley Took 10 mins ¢) ¢y ¢) & & & & You don't have to swing if you don’t want to now. We up already. What a day! ib i-# September 19 &% thestockalley @ 8",
+  "parsed": {},
+  "duration_sec": 7.484
+}

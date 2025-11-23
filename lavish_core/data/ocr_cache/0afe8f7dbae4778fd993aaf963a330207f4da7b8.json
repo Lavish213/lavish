@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2139.PNG",
+  "cache_key": "0afe8f7dbae4778fd993aaf963a330207f4da7b8",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley 5499.13 | 19.19% Orn Qi V1 WN thestockalley Free trade that was added already printing... September 29 @& thestockalley in) Q G) ry",
+  "parsed": {},
+  "duration_sec": 6.876
+}

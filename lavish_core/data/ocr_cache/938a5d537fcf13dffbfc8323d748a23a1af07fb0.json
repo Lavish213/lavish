@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2163 2.PNG",
+  "cache_key": "938a5d537fcf13dffbfc8323d748a23a1af07fb0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 etl LTE ' < Posts thestockalley WUE LUITSLUULHNRACy — The Stock Alley Home Collections Shop Membership Abo Swing trade for the weekend 3 days ago $1.2 million in this trade $685 Call Breakeven To breakeven $689.60 +8.38% Show less 7 @0 th - 2 Q173 A tparoakaney, ves lord. Again, take profits when green ¢ ¢ September 23 @ 6",
+  "parsed": {},
+  "duration_sec": 6.927
+}

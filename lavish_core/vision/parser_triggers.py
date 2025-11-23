@@ -1,0 +1,83 @@
+"""
+lavish_core/vision/parser_triggers.py
+------------------------------------
+Parses OCR text from screenshots into structured trade signals.
+"""
+
+import re
+import json
+import logging
+from datetime import datetime, timezone
+from pathlib import Path
+
+try:
+    from lavish_core.vision.parser_triggers import parse_trade_text
+except Exception:
+    from lavish_core.vision.parser import parse_trade_text   # fallback to your file name
+
+LOG_DIR = Path("data/logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+logger = logging.getLogger("LavishParser")
+logger.setLevel(logging.INFO)
+fh = logging.FileHandler(LOG_DIR / "parser.log")
+fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+logger.addHandler(fh)
+
+BUY_PATTERN = re.compile(r"\b(BUY|LONG)\b", re.IGNORECASE)
+SELL_PATTERN = re.compile(r"\b(SELL|SHORT)\b", re.IGNORECASE)
+TICKER_PATTERN = re.compile(r"\b[A-Z]{1,5}\b")
+QTY_PATTERN = re.compile(r"\b(\d+(?:\.\d+)?)\b")
+
+OUT_DIR = Path("data/signals_out")
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+def _clean_text(raw_text: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9\s\.\%]", " ", raw_text)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned.upper()
+
+def parse_trade_text(ocr_output: dict) -> dict:
+    if not ocr_output or "text" not in ocr_output:
+        logger.warning("No OCR text found in input.")
+        return None
+
+    raw = ocr_output["text"]
+    text = _clean_text(raw)
+
+    intent = None
+    if BUY_PATTERN.search(text):
+        intent = "BUY"
+    elif SELL_PATTERN.search(text):
+        intent = "SELL"
+
+    if not intent:
+        logger.info("No BUY/SELL keyword detected.")
+        return None
+
+    tickers = [t for t in TICKER_PATTERN.findall(text) if t not in {"BUY", "SELL", "LONG", "SHORT"}]
+    ticker = tickers[0] if tickers else None
+
+    qty_match = QTY_PATTERN.findall(text)
+    quantity = float(qty_match[0]) if qty_match else 1.0
+
+    confidence = 0.5
+    if ticker and intent:
+        confidence += 0.3
+    if "CONFIRM" in text or "TARGET" in text:
+        confidence += 0.1
+
+    result = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "intent": intent,
+        "ticker": ticker,
+        "quantity": quantity,
+        "confidence": round(min(confidence, 1.0), 2),
+        "source_text": raw[:300]
+    }
+
+    outfile = OUT_DIR / f"{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{ticker or 'UNK'}.json"
+    with open(outfile, "w") as f:
+        json.dump(result, f, indent=2)
+
+    logger.info(f"Parsed trade: {result}")
+    return result

@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2441 2.PNG",
+  "hash": "4ff05ee8bee28b8253035c8666b34e275f583432",
+  "text_excerpt": "< Posts\nthestockalley\n\n&% thestockalley\n\nMicroStrategy\n$383.52 ©\n\nA $10.22 (2.74%) Pre-market\n24 Hour Market\n\nOur Qiv W\nthestockalley Nice swing hit.\nJuly 2\n\nm@ Q 6G\n\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.65,
+    "ref_price": 383.52
+  },
+  "created_at": "2025-11-02T12:46:59.596846Z"
+}

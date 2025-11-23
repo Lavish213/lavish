@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2184.PNG",
+  "cache_key": "3a9959c1c487759ed89b8490c9df23eace61d64b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © < Posts thestockalley OrQ V WN thestockalley Tesla trade up ¢) September 16 O27 Q3 V2 W thestockalley Cheap trade already paid off. September 16 @ 6",
+  "parsed": {},
+  "duration_sec": 6.693
+}

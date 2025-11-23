@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2151 2.PNG",
+  "cache_key": "a20f46184a17e3a90ab274cb75759bffb75ae121",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 al) LTE @) < Posts thestockalley Gs. = thestockalley x APP :O: is, Builder Oct3 Oct10 Oct17 Oct24 Oct31 Buy Sell Call Put $640 Call 30:30 +) Breakeven To breakeven $648.10 +1.33% -34.41% Today Share price: $639.62 4 TSLA FO: i, Builder (ete Oct3 Oct10 Oct17 Oct24 Oct31 Buy Sell Call Put $440 Call a +) Breakeven _ To breakeven $440.71 +4.63% -91.89% Today Pee Qu V2 A thestockalley Two trades that can print by tomorrow if it’s a Green Day. Trade at your own risk. September 25 G&% thestockalley",
+  "parsed": {},
+  "duration_sec": 7.009
+}

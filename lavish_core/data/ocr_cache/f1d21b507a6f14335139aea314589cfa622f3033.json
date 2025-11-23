@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2211.PNG",
+  "cache_key": "f1d21b507a6f14335139aea314589cfa622f3033",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ot LTE ) < Posts thestockalley LITSLULHNAIICYy OWIYy WauUe Ill MIU September 9 @& thestockalley © thestockalley Cheap trade ¢ The Stock Alley \"| 44minutes ago New Unlock with membership Buy post $25 9Q1 V7 thestockalley Cheap trade for sale. Link in bio 2 hours ago O73 Q4 W4 W thestockalley Investment flipped if you bought my last trade. Sell when you want. The target is always GREEN ©@ September 9 @& thestockalley",
+  "parsed": {},
+  "duration_sec": 7.524
+}

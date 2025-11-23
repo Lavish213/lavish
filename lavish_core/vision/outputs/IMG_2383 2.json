@@ -1,0 +1,3 @@
+{
+  "raw_summary": "```json\n{\n  \"symbols\": [\"WY\", \"NFLX\", \"DOGE\"],\n  \"actions\": [\"accept\", \"took profits\"],\n  \"targets\": [\"$1,242.50\", \"$0.24\"],\n  \"stops\": [],\n  \"timeframe\": \"24 Hour Market\",\n  \"notes\": \"Free trade hits target. Smart move to take profits before the close.\"\n}\n```"
+}

@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-10-27T06:59:09+00:00",
+  "count": 0,
+  "items": [],
+  "sources": [
+    {
+      "name": "finnhub",
+      "ok": false,
+      "items": 0,
+      "took_ms": 0,
+      "error": "RuntimeError: No Collector class or collect() function found"
+    },
+    {
+      "name": "alpha",
+      "ok": false,
+      "items": 0,
+      "took_ms": 0,
+      "error": "RuntimeError: No Collector class or collect() function found"
+    },
+    {
+      "name": "crypto_buffed",
+      "ok": false,
+      "items": 0,
+      "took_ms": 0,
+      "error": "RuntimeError: No Collector class or collect() function found"
+    },
+    {
+      "name": "crypto",
+      "ok": false,
+      "items": 0,
+      "took_ms": 0,
+      "error": "RuntimeError: No Collector class or collect() function found"
+    }
+  ],
+  "meta": {
+    "timeout": 12,
+    "max_articles": 250,
+    "concurrency": 6,
+    "root": "/Users/angelowashington/Lavish_bot"
+  }
+}

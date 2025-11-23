@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2071.PNG",
+  "cache_key": "9572f62b716d8a331b7b78425b7979a681659b28",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:38 a) 5G+ @ ) < Posts thestockalley O22 Qi V1 W 11 hours ago Ooo Qs V2 W thestockalley AMD is up 57% since my post about it today. You don't have to hold it. Green is green, but I’m very bullish heading into November on AMD. Now, since we... more 11 hours ago — The Stock Alley (Ty os Home Collections Shop Membership Abo @ Q eo",
+  "parsed": {},
+  "duration_sec": 9.096
+}

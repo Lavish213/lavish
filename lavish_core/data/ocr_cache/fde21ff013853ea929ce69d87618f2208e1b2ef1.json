@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2116.PNG",
+  "cache_key": "fde21ff013853ea929ce69d87618f2208e1b2ef1",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-89.93deg"
+  ],
+  "ocr_text": "10:41 al 5G OC ) < Posts thestockalley SPY SPDR S&P 500 ETF $666.28 © A $0.10 (0.02%) Today 24 Hour Market O73 Q1 V2 W thestockalley The first trade of the month printed for all. My instructions were clear, transparent and honest. Congrats! October 1 &% thestockalley @ 6",
+  "parsed": {},
+  "duration_sec": 6.877
+}

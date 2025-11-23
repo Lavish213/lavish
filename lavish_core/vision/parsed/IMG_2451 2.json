@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2451 2.PNG",
+  "hash": "ae3b2a79b0fda55cc1552a8e73a2fb503543fe5d",
+  "text_excerpt": "< Posts\nthestockalley\n\n&% thestockalley\n\nMSTR\n\nMicroStrategy\n$397.00 ©\n\nA $13.12 (3.42%) Today\n\na\nK\n24 Hour Market\n\\\nyy\n| Rp AA\nVy\n\nO42 Q2 71 W\nso Taking 90% profit here and riding the rest &\n\nJune 30\n\n@ @Q 6 s\n\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.65,
+    "ref_price": 397.0
+  },
+  "created_at": "2025-11-02T12:47:05.066918Z"
+}

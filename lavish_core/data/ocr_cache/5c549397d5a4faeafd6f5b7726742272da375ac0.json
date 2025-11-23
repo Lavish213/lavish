@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2137.PNG",
+  "cache_key": "5c549397d5a4faeafd6f5b7726742272da375ac0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © < Posts thestockalley &% thestockalley x HOOD °O: 3 Oct10 Oct17 Oct24 (ofeiacy Nov 21 Dec19 Jan16,20 Buy Sell Call Put $170 Call e168 +) Breakeven To breakeven $171.60 +32.63% +28.00% Today M2 Qi8 VY 27 A thestockalley Who has the heart to take this call with me ? @3 5 days ago O81 Qe We W thestockalley Free trade green September 29 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 6.332
+}

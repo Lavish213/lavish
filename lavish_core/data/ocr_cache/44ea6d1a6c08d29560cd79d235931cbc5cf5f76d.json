@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2153 2.PNG",
+  "cache_key": "44ea6d1a6c08d29560cd79d235931cbc5cf5f76d",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 ol LTE © < Posts thestockalley The Stock Alley Home Posts Shop Possible banger and cheap! Just now 9x7 QV W thestockalley Last trade of the week. Link in bio 2 hours ago O2 Q7 V3 W thestockalley Wow . Swings got cooked but last trade of the week said watch this ... @) @) @) & & September 24 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 7.023
+}

@@ -1,0 +1,231 @@
+/* shared/layout.css
+   Shell, sidebar, topbar, grid layout
+*/
+
+@import url("./base.css");
+
+/* Shell */
+
+.lavish-shell {
+  min-height: 100vh;
+  display: flex;
+  background: radial-gradient(circle at top, #0f172a 0, #020309 55%, #000 100%);
+}
+
+/* Sidebar */
+
+.lavish-sidebar {
+  width: var(--lavish-nav-width);
+  background: radial-gradient(circle at top, #020617, #020617 60%, #000 100%);
+  border-right: 1px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 14px 0 40px rgba(0, 0, 0, 0.85);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  position: relative;
+  z-index: 10;
+}
+
+.lavish-sidebar-logo,
+.sidebar-title {
+  font-family: var(--lavish-font-display);
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--lavish-gold-strong);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+  flex: 1;
+}
+
+button.nav-item {
+  width: 100%;
+  justify-content: center;
+  font-size: 11px;
+  padding-inline: 8px;
+}
+
+.nav-item-active {
+  background: radial-gradient(circle at top left, #f6c15c, #b98c37);
+  color: #020617;
+  border-color: transparent;
+  box-shadow: 0 0 22px rgba(244, 193, 92, 0.8);
+}
+
+.lavish-sidebar-footer {
+  margin-top: 8px;
+  font-size: 9px;
+  color: var(--lavish-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+}
+
+/* Main area */
+
+.lavish-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 24px 22px 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Topbar */
+
+.lavish-topbar,
+.lavish-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.topbar-left,
+.lavish-topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-title,
+.lavish-title {
+  font-family: var(--lavish-font-display);
+  font-size: 18px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.page-subtitle,
+.lavish-subtitle {
+  font-size: 12px;
+  color: var(--lavish-text-soft);
+}
+
+.topbar-right,
+.lavish-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Status pill */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--lavish-radius-pill);
+  border: 1px solid var(--lavish-border-subtle);
+  font-size: 11px;
+  color: var(--lavish-text-soft);
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 60%);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--lavish-text-muted);
+}
+
+.status-dot-online {
+  background: var(--lavish-green);
+  box-shadow: 0 0 10px rgba(45, 222, 152, 0.9);
+}
+
+.status-dot-offline {
+  background: var(--lavish-red);
+  box-shadow: 0 0 10px rgba(255, 76, 106, 0.9);
+}
+
+/* Grid */
+
+.lavish-grid,
+.lavish-grid-dashboard,
+.lavish-grid-home {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.6fr);
+  grid-auto-rows: minmax(0, auto);
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.lavish-grid-dashboard .card-account {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+}
+
+.lavish-grid-dashboard .card-ai {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+}
+
+/* Generic metric styles */
+
+.metric-block {
+  margin-bottom: 8px;
+}
+.metric-label {
+  font-size: 11px;
+  color: var(--lavish-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.metric-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+.metric-subvalue {
+  font-size: 13px;
+  color: var(--lavish-text-soft);
+}
+
+/* Footer */
+
+.lavish-footer {
+  padding: 10px 24px 16px;
+  font-size: 10px;
+  color: var(--lavish-text-muted);
+  text-align: right;
+}
+
+/* Responsive */
+
+@media (max-width: 1024px) {
+  .lavish-shell {
+    flex-direction: column;
+  }
+
+  .lavish-sidebar {
+    flex-direction: row;
+    width: 100%;
+    height: 60px;
+    border-right: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.9);
+    justify-content: space-between;
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    margin-top: 0;
+  }
+
+  .lavish-main {
+    padding: 14px 14px 18px;
+  }
+
+  .lavish-grid,
+  .lavish-grid-dashboard,
+  .lavish-grid-home {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

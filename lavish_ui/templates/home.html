@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lavish – Home</title>
+
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/shared/fonts.css">
+  <link rel="stylesheet" href="/shared/lavish_theme.css">
+  <link rel="stylesheet" href="/shared/layout.css">
+  <link rel="stylesheet" href="/shared/animations.css">
+
+  <!-- Reuse dashboard styling for grid + cards -->
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+</head>
+<body class="lavish-body lavish-dashboard-body" data-page="home">
+
+  <div class="lavish-shell">
+    <!-- Sidebar -->
+    <aside class="lavish-sidebar">
+      <div class="lavish-sidebar-logo">L</div>
+
+      <nav class="lavish-nav">
+        <button class="nav-item nav-item-active" data-target="/home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" data-target="/dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" data-target="/achievements">
+          <span class="nav-icon">🏅</span>
+          <span class="nav-label">Achievements</span>
+        </button>
+        <button class="nav-item" data-target="/settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+
+      <div class="lavish-sidebar-footer">
+        <span class="sidebar-mode-pill" id="sidebar-mode-pill">
+          MODE: PAPER
+        </span>
+        <button class="sidebar-logout-btn">Logout / Reset</button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="lavish-main">
+      <!-- Top bar -->
+      <header class="lavish-topbar">
+        <div class="topbar-left">
+          <h1 class="page-title">Home Overview</h1>
+          <p class="page-subtitle">
+            Today’s snapshot of your trading world.
+          </p>
+        </div>
+
+        <div class="topbar-right">
+          <div class="status-pill">
+            <span class="status-dot status-dot-offline" id="home-conn-dot"></span>
+            <span id="home-conn-text">Connecting…</span>
+          </div>
+          <div class="market-open-pill">
+            Market opens in
+            <span id="market-countdown" class="countdown-text">--:--:--</span>
+          </div>
+          <span id="home-clock" class="lavish-clock"></span>
+        </div>
+      </header>
+
+      <!-- Grid -->
+      <section class="lavish-grid lavish-grid-home">
+        <!-- Equity summary -->
+        <article class="card card-large">
+          <header class="card-header">
+            <h2 class="card-title">Portfolio Snapshot</h2>
+          </header>
+          <div class="card-body card-body-flex">
+            <div class="metric-block">
+              <div class="metric-label">Net Equity</div>
+              <div id="home-equity" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-row">
+              <div>
+                <div class="metric-label">Day P&amp;L</div>
+                <div id="home-day-pnl" class="metric-subvalue">$0.00</div>
+              </div>
+              <div>
+                <div class="metric-label">Open Positions</div>
+                <div id="home-open-positions" class="metric-subvalue">0</div>
+              </div>
+            </div>
+            <div class="mini-chart-placeholder">
+              <span class="mini-chart-label">Last 7 days</span>
+              <div class="mini-chart-sparkline" id="home-sparkline"></div>
+            </div>
+          </div>
+        </article>
+
+        <!-- AI mood + quick brief -->
+        <article class="card card-medium">
+          <header class="card-header">
+            <h2 class="card-title">Lavish Briefing</h2>
+            <span id="home-ai-bias" class="meta-chip meta-chip-neutral">Neutral</span>
+          </header>
+          <div class="card-body">
+            <p class="ai-main-text" id="home-ai-summary">
+              Waiting for Lavish Core…
+            </p>
+            <div class="ai-meta-row">
+              <div>
+                <div class="meta-label">7-day Accuracy</div>
+                <div id="home-ai-accuracy" class="ai-accuracy">–%</div>
+              </div>
+              <div>
+                <div class="meta-label">Risk Light</div>
+                <div id="home-risk-light" class="risk-light-pill">Unknown</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Market mood & news -->
+        <article class="card card-medium">
+          <header class="card-header">
+            <h2 class="card-title">Market Mood &amp; News</h2>
+          </header>
+          <div class="card-body">
+            <div class="risk-meter-track">
+              <div id="home-risk-meter" class="risk-meter-handle"></div>
+            </div>
+            <div class="risk-row">
+              <span id="home-sentiment-label" class="risk-label">Neutral</span>
+              <span id="home-heat-label" class="risk-heat">0%</span>
+            </div>
+            <ul id="home-news-list" class="news-list">
+              <li class="news-item news-item-placeholder">
+                Waiting for market headlines…
+              </li>
+            </ul>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="/shared/lavish-config.js"></script>
+  <script src="/shared/lavish-utils.js"></script>
+  <!-- You can later add a dedicated home.js; for now dashboard.js can fill basic data -->
+  <script src="/dashboard/dashboard.js"></script>
+</body>
+</html>

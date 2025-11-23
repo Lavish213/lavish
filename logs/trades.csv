@@ -1,0 +1,16 @@
+ts,intent,symbol,qty,side,type,limit_price,stop_price,take_profit,stop_loss,order_id,status,reason,dry_run
+2025-10-25T08:40:38.456342+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T08:43:00.289780+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T08:47:09.300782+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T08:50:02.740546+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T08:57:37.271602+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:10:49.338660+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:13:19.976380+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:40:44.338687+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:43:54.163914+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:46:52.167658+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T11:56:47.857356+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-25T12:07:26.089853+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-26T08:42:19.052502+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-31T03:55:36.919923+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0
+2025-10-31T03:56:27.580858+00:00,shutdown,,,,,,,,,,EXIT,user_interrupt,0

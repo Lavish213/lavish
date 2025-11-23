@@ -1,0 +1,78 @@
+{
+  "timestamp": "2025-10-27T07:03:16+00:00",
+  "count": 4,
+  "items": [
+    {
+      "source": "news_alpha",
+      "title": "Placeholder article — collector not implemented yet",
+      "url": "https://placeholder.example.com",
+      "ts": "2025-10-27T00:00:00Z",
+      "summary": "This is a fallback entry until this collector is customized.",
+      "tickers": [],
+      "raw": null
+    },
+    {
+      "source": "news_crypto",
+      "title": "Placeholder article — collector not implemented yet",
+      "url": "https://placeholder.example.com",
+      "ts": "2025-10-27T00:00:00Z",
+      "summary": "This is a fallback entry until this collector is customized.",
+      "tickers": [],
+      "raw": null
+    },
+    {
+      "source": "news_crypto_buffed",
+      "title": "Placeholder article — collector not implemented yet",
+      "url": "https://placeholder.example.com",
+      "ts": "2025-10-27T00:00:00Z",
+      "summary": "This is a fallback entry until this collector is customized.",
+      "tickers": [],
+      "raw": null
+    },
+    {
+      "source": "news_finnhub",
+      "title": "Placeholder article — collector not implemented yet",
+      "url": "https://placeholder.example.com",
+      "ts": "2025-10-27T00:00:00Z",
+      "summary": "This is a fallback entry until this collector is customized.",
+      "tickers": [],
+      "raw": null
+    }
+  ],
+  "sources": [
+    {
+      "name": "alpha",
+      "ok": true,
+      "items": 1,
+      "took_ms": 0,
+      "error": null
+    },
+    {
+      "name": "crypto_buffed",
+      "ok": true,
+      "items": 1,
+      "took_ms": 0,
+      "error": null
+    },
+    {
+      "name": "crypto",
+      "ok": true,
+      "items": 1,
+      "took_ms": 0,
+      "error": null
+    },
+    {
+      "name": "finnhub",
+      "ok": true,
+      "items": 1,
+      "took_ms": 0,
+      "error": null
+    }
+  ],
+  "meta": {
+    "timeout": 12,
+    "max_articles": 250,
+    "concurrency": 6,
+    "root": "/Users/angelowashington/Lavish_bot"
+  }
+}

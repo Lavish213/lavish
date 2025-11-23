@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2148.PNG",
+  "cache_key": "577add02d3b8ca280c6f4674bc3ad0932c5cb4f6",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © ) < Posts thestockalley Va Q3 V3 W thestockalley Free trade | posted yesterday up nicely right now, take profits and call it a day. (Heoey September 26 Tesla $428.68 © A ¢& 90/1 ORO) Dra-marlat @ @Q 6",
+  "parsed": {},
+  "duration_sec": 1.966
+}

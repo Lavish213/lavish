@@ -1,0 +1,36 @@
+/* dashboard/components/animations/light_bar_sweep.css */
+
+.light-bar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.light-bar-sweep::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 40%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #f4c15d, transparent);
+  opacity: 0.0;
+  pointer-events: none;
+}
+
+.light-bar-sweep:hover::before {
+  animation: light-bar-sweep 0.8s ease-out;
+}
+
+@keyframes light-bar-sweep {
+  0% {
+    transform: translateX(0%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(260%);
+    opacity: 0;
+  }
+}

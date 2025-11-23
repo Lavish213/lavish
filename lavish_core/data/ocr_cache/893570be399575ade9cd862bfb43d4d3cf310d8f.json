@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2124.PNG",
+  "cache_key": "893570be399575ade9cd862bfb43d4d3cf310d8f",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G © ) < Posts thestockalley Nike $70.62 @ A $0.17 (0.24%) Today A $0.90 (1.29%) After-hours Mai O2 Q3 V1 W thestockalley Good earnings . Trade up. September 30 Gs. = thestockalley",
+  "parsed": {},
+  "duration_sec": 1.868
+}

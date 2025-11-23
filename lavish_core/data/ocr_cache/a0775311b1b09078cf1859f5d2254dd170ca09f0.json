@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2160.PNG",
+  "cache_key": "a0775311b1b09078cf1859f5d2254dd170ca09f0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "Posts thestockalley Please wait until October 1st to pay for a membership; the month is over. | will be refunding you today. You can buy the trade individually until October 1st. Thank you! O42 V9 thestockalley PSA September 23 G& thestockalley",
+  "parsed": {},
+  "duration_sec": 7.691
+}

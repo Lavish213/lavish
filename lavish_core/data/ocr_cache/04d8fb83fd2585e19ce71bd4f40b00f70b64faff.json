@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2114.PNG",
+  "cache_key": "04d8fb83fd2585e19ce71bd4f40b00f70b64faff",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 a «6=5G ©) < Posts thestockalley The Stock Alley Home Posts Shop Whale enters Meta ahead of earnings later this month Just now Or Q V1 W thestockalley Meta trade available. The contract is not cheap. Link in bio if you want in. October 1 &% thestockalley SPY SPDR S&P 500 ETF $666.90 © A $0.72 (0.11%) Today 24 Hour Market",
+  "parsed": {},
+  "duration_sec": 6.663
+}

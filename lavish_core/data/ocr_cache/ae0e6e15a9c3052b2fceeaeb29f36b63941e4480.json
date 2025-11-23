@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2190 2.PNG",
+  "cache_key": "ae0e6e15a9c3052b2fceeaeb29f36b63941e4480",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © ) < Posts thestockalley thestockalley Tesla trade available. A little risky. Link in bio. September 15 &% thestockalley Cheap trade The Stock Alley Just now Go long and be patient . It should start squeezing up within the next few weeks ... @ss V12 A thestockalley Cheap trade. It's $1.60 a contract but it’s a long term option, so in my opinion it’s cheap giving the amount of time on the contract... more September 15 &% thestockalley @ Q eo",
+  "parsed": {},
+  "duration_sec": 7.022
+}

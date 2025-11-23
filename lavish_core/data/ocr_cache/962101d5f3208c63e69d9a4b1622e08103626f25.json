@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2090 2.PNG",
+  "cache_key": "962101d5f3208c63e69d9a4b1622e08103626f25",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 ot) 5G+ | ) < Posts thestockalley * $899.22 | 81.69% OxQ V1 W thestockalley Swing trade already up 81% Uy ey ey eb & & 2 days ago",
+  "parsed": {},
+  "duration_sec": 8.072
+}

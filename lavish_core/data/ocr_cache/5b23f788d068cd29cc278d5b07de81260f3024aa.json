@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2194.PNG",
+  "cache_key": "5b23f788d068cd29cc278d5b07de81260f3024aa",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 < September 12 Gets, = thestockalley Contract 24 Total return OnQ Wa al! LIE @ ) Posts thestockalley Total value $2,304.00 * $1,462.95 | 173.94% W thestockalley Not bad for four hours of waiting.... We are done for the day folks. Take off tomorrow. September 11 Gets, = thestockalley SPY in) Q an | 5 8",
+  "parsed": {},
+  "duration_sec": 7.639
+}

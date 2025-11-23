@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2105.PNG",
+  "cache_key": "e71f72d9f36bd4f5b525944ee0f25937f6803868",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 os «6G < Posts thestockalley the Tesla post. 1 week ago gts. thestockalley Tesla stock didn’t even give time to get in so | updated the trade. Go to Patreon. O27 Q V1 thestockalley | updated the Tesla trade with a new one. 1 week ago W gts. thestockalley SPY arr = A Fe FF AX FP OP @ 8",
+  "parsed": {},
+  "duration_sec": 8.094
+}

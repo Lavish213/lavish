@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2075 2.PNG",
+  "cache_key": "06e5a94f5babbafe747f8281bce42c0df2eda52c",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:38 a) 5G+ @ ) < Posts thestockalley Home Posts Shop Cheap trade. Price less 0.30 a contract. Yesterday A whale put in 1.4 mill on this one On Vs n thestockalley Told my client to sell 100 of these contracts out of the 200 she had for the AMD trade. | believe in it... if you're green you can do the same. 12 hours ago Can you tell me if we're talking on . discord???? J @ @Q 6",
+  "parsed": {},
+  "duration_sec": 9.499
+}

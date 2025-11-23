@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2104 2.PNG",
+  "cache_key": "333acd3d4a9324d5a1a60639ba3e597fd19ea550",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ot) 5G+ ©) < Posts thestockalley Gs. = thestockalley TSLA Tesla $453.73 ® V $5.74 (1.25%) Today 24 Hour Market Mss Q5 V5 A thestockalley Tesla sold off on us after a very good delivery report. It happens. I'll look for another trade. I’m waiting on the go ahead for APP. If | get it | will post on Patreon under the Tesla post. 1 week ago @ @Q 6",
+  "parsed": {},
+  "duration_sec": 7.521
+}

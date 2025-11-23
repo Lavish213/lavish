@@ -1,0 +1,2 @@
+ts,mode,action,symbol,qty,tp,sl,status,order_id,client_order_id,latency_ms,note
+2025-10-30T08:59:02.362188+00:00,paper,buy,AAPL,1.0,,,pending_new,902ad2ec-ca1a-44f3-9cbc-6462d9186d46,lavish-51c537bc8bb04c839e,917.7,

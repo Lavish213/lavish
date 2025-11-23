@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2221.PNG",
+  "cache_key": "0623d8d33186281310b9ce18ca3f52bb3abff4f2",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "Posts thestockalley Cheap swing trade went up more overnight, you can take profits if you want and call it a week. Congrats. O~%Q V thestockalley Enjoy your week if you got in this trade. September 5 W ge. thestockalley",
+  "parsed": {},
+  "duration_sec": 5.909
+}

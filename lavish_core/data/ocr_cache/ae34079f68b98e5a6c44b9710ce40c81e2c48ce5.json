@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2074 2.PNG",
+  "cache_key": "ae34079f68b98e5a6c44b9710ce40c81e2c48ce5",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-0.0deg"
+  ],
+  "ocr_text": "10:38 a) 5G+ @ ) < Posts thestockalley PayPal $76.35 © A $1.74 (2.33%) Today 24 Hour Market OrQy W thestockalley PayPal looking good still... 12 hours ago Gs. = thestockalley Home Posts Shop @ @Q 6",
+  "parsed": {},
+  "duration_sec": 8.431
+}

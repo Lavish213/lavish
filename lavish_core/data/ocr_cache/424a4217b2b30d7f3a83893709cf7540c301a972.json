@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2220.PNG",
+  "cache_key": "424a4217b2b30d7f3a83893709cf7540c301a972",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "oll LTE © ») Posts thestockalley Cheap trade extended The Stock Alley Just now New Or V W thestockalley | added the same cheap trade but with a longer expiration date. It’s still cheap. Link in bio September 5 Gs. ~=thestockalley",
+  "parsed": {},
+  "duration_sec": 2.016
+}

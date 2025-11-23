@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2101 2.PNG",
+  "cache_key": "fa6b7e8a4c4da9329077738b7fdff4e8c17a36a8",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ob 5G+ < Posts thestockalley VUVTIINYIIL. @Y 6 days ago gts. thestockalley META Meta Platforms $729.10 © A $9.72 (1.36%) Today A $2.04 (0.28%) Overnight 841 Q 73 W thestockalley Hitting our target in after hours... this trade will be a banger! 6 days ago gts. thestockalley META @ 8",
+  "parsed": {},
+  "duration_sec": 7.528
+}

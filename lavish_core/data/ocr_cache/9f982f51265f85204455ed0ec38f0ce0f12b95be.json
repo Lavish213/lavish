@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2214.PNG",
+  "cache_key": "9f982f51265f85204455ed0ec38f0ce0f12b95be",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © _) < Posts thestockalley Robinhood Markets $117.08 © A $15.83 (15.63%) Today 24 Hour Market O27 Q Ve W thestockalley Still in the game coach § September 8 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 6.607
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2121.PNG",
+  "cache_key": "da30558f83864143048ec53881b9070489b20cd4",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 5G < Posts thestockalley 92x QV W thestockalley Spy trade is up, sell 80% and ride the others to the target . Day done already. October 1 @& thestockalley 5300 37/1 Ox Q Ve W thestockalley First trade of the month already up and green. We have 30 days to trade. $300 in 8 mins is good enough. $300 x 30 =$9,000.00. Don't be greedy, we have time to make more. October 1 @& thestockalley",
+  "parsed": {},
+  "duration_sec": 7.184
+}

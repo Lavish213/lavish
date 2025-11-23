@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2145.PNG",
+  "cache_key": "2e32db8fe8274ef8bc21d9cb98635ecd796c1e47",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley 1 Q7 V1 A thestockalley Banger September 26 ge. thestockalley $% The Stock Alley Home Posts Shop Cheap but risky Swing trade available 18 minutes ago Ow V1 W thestockalley The option cost between $1.89-$2.37 per contract. Link in bio September 26 ge. thestockalley APP AppLovin $659.56 © m Q 6",
+  "parsed": {},
+  "duration_sec": 6.69
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2225.PNG",
+  "cache_key": "ae9b079d45778fb1304cae6b2c7af0334a3f6ff4",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:46 al) LTE @) < Posts thestockalley YOR, «WIE SLUUKaliey = The Stock Alley (Ty ee Home Collections Shop Membership Abo Cheap trade . Last trade for the day 2 hours ago Orv A thestockalley Cheap trade less than a dollar moving up ... link in bio to get it. September 4 Gs. = thestockalley This stock has a buy signal and options are affordable. @ Q 8 ¢",
+  "parsed": {},
+  "duration_sec": 2.433
+}

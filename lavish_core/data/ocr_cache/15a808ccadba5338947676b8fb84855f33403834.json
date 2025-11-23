@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2218.PNG",
+  "cache_key": "15a808ccadba5338947676b8fb84855f33403834",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ot LTE < Posts thestockalley LUITSLYUULHAICYy LI last MHUpe 1Ul UIC PIUVUU UVLVIT. IL Wdas announced just now that HOOD is joining the S&P 500. September 5 ge. thestockalley Cheap trades hitting @ O27 Q V7 thestockalley Good week overall. Cheap trades came through... September 5 ge. thestockalley @ Q eo",
+  "parsed": {},
+  "duration_sec": 2.109
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2219.PNG",
+  "cache_key": "d205c9a9ca12047d716917cf8a0ef2d27cacc28f",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ll LTE < Posts thestockalley otek, §=TNESTOCKalley Whale loaded up on tesla The Stock Alley Just now New O23 Q4 W5 A thestockalley Link in bio to get the trade. September 5 ge. thestockalley @ Q eo",
+  "parsed": {},
+  "duration_sec": 6.577
+}

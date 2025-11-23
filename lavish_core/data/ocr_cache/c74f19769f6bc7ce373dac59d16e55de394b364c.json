@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2215.PNG",
+  "cache_key": "c74f19769f6bc7ce373dac59d16e55de394b364c",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ll LTE < Posts thestockalley O37 Q Ve W thestockalley Still in the game coach @ September 8 ge. thestockalley | had some tears this morning because my plan has worked out so far. It doesn’t even have to be about the money. It’s about the hard work, the losses, and the dedication | put into this craft. | would probably retire if this goes to where | believe it will go. But for now, we’re up @. 545 CQh25 Yo TW thestockalley @ September 8 Gk = thactackallaw @ @Q 8",
+  "parsed": {},
+  "duration_sec": 2.507
+}

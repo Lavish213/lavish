@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2173.PNG",
+  "cache_key": "56c54f5516205fdbc65576e602381785baab5916",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 etl LTE ' < Posts thestockalley @& thestockalley Cheap trade : The Stock Alley ~~“ September 15 Unlock with membership Buy post $25 @ 11 O27 Q5 7 W thestockalley | loaded up on this trade. We have two years left. Don't miss it. It's still cheap. Link in bio September 22 @& thestockalley $% The Stock Alley",
+  "parsed": {},
+  "duration_sec": 6.717
+}

@@ -1,0 +1,46 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from typing import List
+from datetime import datetime, timezone
+import csv
+
+from ..database.db import get_db
+from ..schemas.signal import SignalCreate, SignalOut
+from ..models.signal import Signal
+from ..config import get_settings
+from ..utils.fs import ensure_parent
+
+router = APIRouter(prefix="/signals", tags=["signals"])
+settings = get_settings()
+
+def _log_signal_csv(s: Signal):
+    ensure_parent(settings.CSV_SIGNALS)
+    write_header = not settings.CSV_SIGNALS.exists()
+    with settings.CSV_SIGNALS.open("a", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["ts", "source", "symbol", "action", "confidence", "price_hint"])
+        if write_header:
+            w.writeheader()
+        w.writerow({
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "source": s.source,
+            "symbol": s.symbol,
+            "action": s.action,
+            "confidence": s.confidence,
+            "price_hint": s.price_hint if s.price_hint is not None else ""
+        })
+
+@router.post("", response_model=SignalOut)
+def create_signal(payload: SignalCreate, db: Session = Depends(get_db)):
+    sig = Signal(
+        source=payload.source, symbol=payload.symbol.upper(), action=payload.action.lower(),
+        confidence=float(payload.confidence), price_hint=payload.price_hint, meta=payload.meta
+    )
+    db.add(sig)
+    db.commit()
+    db.refresh(sig)
+    _log_signal_csv(sig)
+    return sig
+
+@router.get("", response_model=List[SignalOut])
+def list_signals(limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(Signal).order_by(Signal.created_at.desc()).limit(limit).all()

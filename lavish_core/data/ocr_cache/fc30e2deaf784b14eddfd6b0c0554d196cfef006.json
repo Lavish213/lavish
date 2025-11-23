@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2081 2.PNG",
+  "cache_key": "fc30e2deaf784b14eddfd6b0c0554d196cfef006",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 ot) 5G+ < Posts thestockalley thestockalley Cheap trade closed green &) & & & & 1 day ago @& thestockalley * $1,144.19 | 27.8 O77 Q V3 W thestockalley Cheap trade pays off. It’s on you from here. It's impossible to tell you when to sell when you’re in... more 2 days ago @& thestockalley $844.1 ay Q G) ry",
+  "parsed": {},
+  "duration_sec": 6.797
+}

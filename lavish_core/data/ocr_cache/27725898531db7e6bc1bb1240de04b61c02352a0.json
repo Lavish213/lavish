@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2134.PNG",
+  "cache_key": "27725898531db7e6bc1bb1240de04b61c02352a0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © ) < Posts thestockalley HOOD Robinhood Markets $134.88 © A $13.10 (10.75%) Today 24 Hour Market On Qe Va A thestockalley The target for this upward wave will be completed at $145.00. My rules in trading is never wait until the target to sell. September 29 a =thestockallev @ @Q 6",
+  "parsed": {},
+  "duration_sec": 2.159
+}

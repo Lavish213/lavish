@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2189 2.PNG",
+  "cache_key": "120f9d27bc1d5ba1ad3b86bb41b9e747afb960eb",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 etl) LTE ' < Posts thestockalley gts. thestockalley Tesla trade for this week 5 The Stock Alley ~~“ 47 minutes ago O27 Q1 V2 W thestockalley Tesla trade available. A little risky. Link in bio. September 15 gts. thestockalley",
+  "parsed": {},
+  "duration_sec": 6.853
+}

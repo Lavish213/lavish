@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2209.PNG",
+  "cache_key": "58948c4967e1108d284be85c26c76afad8c8846b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © _) < Posts thestockalley (AD Spy swing trade September 9th patreon.com/c/Darkroomofficial Oe V7 thestockalley Swing trade in bio September 9 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 7.726
+}

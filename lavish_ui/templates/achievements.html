@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lavish – Achievements</title>
+
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/shared/fonts.css">
+  <link rel="stylesheet" href="/shared/lavish_theme.css">
+  <link rel="stylesheet" href="/shared/layout.css">
+  <link rel="stylesheet" href="/shared/animations.css">
+</head>
+<body class="lavish-body lavish-dashboard-body" data-page="achievements">
+
+  <div class="lavish-shell">
+    <!-- Sidebar (same nav) -->
+    <aside class="lavish-sidebar">
+      <div class="lavish-sidebar-logo">L</div>
+
+      <nav class="lavish-nav">
+        <button class="nav-item" data-target="/home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item" data-target="/dashboard">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Console</span>
+        </button>
+        <button class="nav-item nav-item-active" data-target="/achievements">
+          <span class="nav-icon">🏅</span>
+          <span class="nav-label">Achievements</span>
+        </button>
+        <button class="nav-item" data-target="/settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+
+      <div class="lavish-sidebar-footer">
+        <span class="sidebar-mode-pill" id="sidebar-mode-ach">
+          MODE: PAPER
+        </span>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="lavish-main">
+      <header class="lavish-topbar">
+        <div class="topbar-left">
+          <h1 class="page-title">Achievements &amp; XP</h1>
+          <p class="page-subtitle">
+            Track how Lavish sees your trading style, consistency &amp; discipline.
+          </p>
+        </div>
+      </header>
+
+      <section class="lavish-grid lavish-grid-achievements">
+        <!-- Overall level -->
+        <article class="card card-large">
+          <header class="card-header">
+            <h2 class="card-title">Trader Profile</h2>
+          </header>
+          <div class="card-body card-body-flex achievements-profile">
+            <div class="xp-ring">
+              <div class="xp-ring-inner" data-progress="42">
+                <span id="xp-level-label" class="xp-level-label">LVL 3</span>
+              </div>
+            </div>
+            <div class="xp-meta">
+              <div class="metric-label">Style</div>
+              <div id="trader-style-label" class="metric-value">
+                Emerging Swing Strategist
+              </div>
+              <p id="trader-style-desc" class="xp-style-desc">
+                Lavish is still learning your preferences. Keep trading and journaling
+                to refine your profile.
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Consistency -->
+        <article class="card card-medium">
+          <header class="card-header">
+            <h2 class="card-title">Consistency Combo</h2>
+          </header>
+          <div class="card-body">
+            <ul class="ach-list">
+              <li>Consecutive green days: <span id="ach-green-streak">0</span></li>
+              <li>Journal streak: <span id="ach-journal-streak">0</span> days</li>
+              <li>Sessions this week: <span id="ach-sessions-week">0</span></li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Risk discipline -->
+        <article class="card card-medium">
+          <header class="card-header">
+            <h2 class="card-title">Risk Discipline</h2>
+          </header>
+          <div class="card-body">
+            <ul class="ach-list">
+              <li>Max loss respected: <span id="ach-max-loss">–</span></li>
+              <li>Average risk per trade: <span id="ach-avg-risk">%–</span></li>
+              <li>Blow-up days this month: <span id="ach-blowups">0</span></li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Research / prep -->
+        <article class="card card-medium">
+          <header class="card-header">
+            <h2 class="card-title">Prep &amp; Research</h2>
+          </header>
+          <div class="card-body">
+            <ul class="ach-list">
+              <li>Watchlist updates this week: <span id="ach-watchlist-updates">0</span></li>
+              <li>News digests read: <span id="ach-digests-read">0</span></li>
+              <li>Patterns tagged: <span id="ach-pattern-tags">0</span></li>
+            </ul>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="/shared/lavish-config.js"></script>
+  <script src="/shared/lavish-utils.js"></script>
+</body>
+</html>

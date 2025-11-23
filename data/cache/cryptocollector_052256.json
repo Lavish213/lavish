@@ -1,0 +1,9 @@
+{
+  "collector": "Crypto News",
+  "sentiment": "negative",
+  "items": [
+    {
+      "headline": "Crypto fetch failed: HTTPSConnectionPool(host='api.coindesk.com', port=443): Max retries exceeded with url: /v1/news/trending (Caused by NameResolutionError(\"<urllib3.connection.HTTPSConnection object at 0x120280b90>: Failed to resolve 'api.coindesk.com' ([Errno 8] nodename nor servname provided, or not known)\"))"
+    }
+  ]
+}

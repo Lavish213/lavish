@@ -1,0 +1,6 @@
+timestamp,level,module,event,message
+2025-10-25T07:22:54Z,INFO,patreon,init,"campaign="
+2025-10-25T07:22:55Z,ERROR,patreon,poll_error,"Patreon 404: <!DOCTYPE html><html lang='en' class='cm-nsMUPl cm-optvld cm-PWCbgc cm-YZJIkq'><head><meta charSet='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><link rel='preload' hre"
+2025-10-25T07:23:56Z,ERROR,patreon,poll_error,"Patreon 404: <!DOCTYPE html><html lang='en' class='cm-nsMUPl cm-optvld cm-PWCbgc cm-YZJIkq'><head><meta charSet='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><link rel='preload' hre"
+2025-10-25T07:24:56Z,ERROR,patreon,poll_error,"Patreon 404: <!DOCTYPE html><html lang='en' class='cm-nsMUPl cm-optvld cm-PWCbgc cm-YZJIkq'><head><meta charSet='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><link rel='preload' hre"
+2025-10-25T07:25:18Z,INFO,patreon,stopped,"Patreon watcher stopped"

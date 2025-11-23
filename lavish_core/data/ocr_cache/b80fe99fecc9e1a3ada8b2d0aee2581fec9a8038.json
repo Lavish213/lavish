@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2102 2.PNG",
+  "cache_key": "b80fe99fecc9e1a3ada8b2d0aee2581fec9a8038",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ot) 5G+ ©) < Posts thestockalley MEIA Meta Platforms $724.37 © A $7.02 (0.98%) Today 24 Hour Market ah O%Q V2 W thestockalley Let's go. Our Meta trade went up as far as 80% today. We have until December to ride it up. However, you should always sell 85% and ride the rest out unless it reaches the stop loss. We are green! & & & & 1 week ago Gs. = thestockalley @ @Q 6",
+  "parsed": {},
+  "duration_sec": 7.711
+}

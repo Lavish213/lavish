@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2158.PNG",
+  "cache_key": "a984101e7c5b4d80c2d3b9199c619fb657955494",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 etl LTE ' < Posts thestockalley thestockalley Last trade of the week. Link in bio September 24 @& thestockalley $4. The Stock Alley Home Posts Shop Swing trade New Just now O72 Q V W thestockalley Another swing trade for the tonight. Link in bio September 23 @& thestockalley $%. The Stock Alley Home Posts Shop Spy swing Just now",
+  "parsed": {},
+  "duration_sec": 7.605
+}

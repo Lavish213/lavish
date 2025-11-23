@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2204 2.PNG",
+  "cache_key": "050550bb63467912bf04d8ffbe67927605759eb6",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 al) LTE @ ) < Posts thestockalley The Stock Alley me Collections Shop Membership xX CRWV 4 ] a c19 Jan Buy Sell Call Put yhow more V6 @8 th 6 é Thank youuuuuu. Both hit! Made $1700 9 107 Q2 V2 W thestockalley Congrats sis & & & September 10 @& thestockalley m@ Q ©",
+  "parsed": {},
+  "duration_sec": 8.316
+}

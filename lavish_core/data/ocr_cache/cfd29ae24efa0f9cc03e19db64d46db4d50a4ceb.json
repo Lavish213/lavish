@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2177 2.PNG",
+  "cache_key": "cfd29ae24efa0f9cc03e19db64d46db4d50a4ceb",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © ) < Posts thestockalley Gs. = thestockalley CRWV CoreWeave $128.91 © A $7.22 (5.94%) Today 24 Hour Market On QsV A thestockalley Got you a free bag on a Friday. Take profits. September 19 @ @Q 6H",
+  "parsed": {},
+  "duration_sec": 7.662
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2180 2.PNG",
+  "cache_key": "27ed83f4f34dadb96914afb7e4537335e040a0fb",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 atl LTE < Posts thestockalley O35 Wa thestockalley Link in bio. September 18 gts. thestockalley Cheap swing trade Just now Risky but worth it. Ow Q2 7 thestockalley Cheap trade for overnight. Link in bio September 17 lala thactanLallaws ay Q S) 3 e",
+  "parsed": {},
+  "duration_sec": 6.991
+}

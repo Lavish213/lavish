@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2144.PNG",
+  "cache_key": "db298da01dea0eb6b94e8b126a5106f51239f379",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © ) < Posts thestockalley September 27 @& thestockalley TSLA Tesla $438.45 © A $15.06 (3.56%) Today 24 Hour Market 1 Q7 V1 in thestockalley Banger & & & & Sentemher 26 @ Q eo",
+  "parsed": {},
+  "duration_sec": 6.747
+}

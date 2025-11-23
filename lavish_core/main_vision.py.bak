@@ -1,0 +1,564 @@
+# lavish_core/main_vision.py
+# All-in-one orchestrator for vision+patreon -> trade triggers
+# - Defaults: paper trading + dry-run (no orders) for safety
+# - Async runners for Patreon polling and image folder watching
+# - OCR with PaddleOCR then Tesseract fallback (if your ocr_engine exposes helpers, we use those)
+# - Pretrade checklist integration (if present), else robust built-in checks
+# - Trade execution via lavish_core.trade.trade_agent (paper/live), or dry-run
+# - SQLite logging for OCR, decisions, and trades
+# - Color console + rotating file logs
+# - Graceful shutdown (SIGINT/SIGTERM)
+
+from __future__ import annotations
+import os, sys, re, json, time, asyncio, signal, logging, sqlite3, hashlib, textwrap
+from dataclasses import dataclass, asdict
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional, Dict, Any, Callable, List, Tuple
+
+# --------------------------- Logging ---------------------------
+LOG_DIR = Path(os.getenv("LAVISH_LOG_DIR", "logs"))
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+class _Color:
+    G = "\033[92m"; Y = "\033[93m"; B = "\033[94m"; R = "\033[91m"; D = "\033[0m"
+
+logger = logging.getLogger("main_vision")
+logger.setLevel(logging.DEBUG if os.getenv("DEBUG","false").lower()=="true" else logging.INFO)
+_ch = logging.StreamHandler()
+_ch.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s: %(message)s"))
+logger.addHandler(_ch)
+try:
+    from logging.handlers import RotatingFileHandler
+    _fh = RotatingFileHandler(LOG_DIR / "main_vision.log", maxBytes=5_000_000, backupCount=3)
+    _fh.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s"))
+    logger.addHandler(_fh)
+except Exception as e:
+    logger.warning(f"File logging disabled: {e}")
+
+# --------------------------- .env loader ---------------------------
+def _load_dotenv_if_available() -> None:
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        logger.info("Loaded .env")
+    except Exception:
+        logger.info("python-dotenv not installed; relying on OS env.")
+
+_load_dotenv_if_available()
+
+# --------------------------- Config ---------------------------
+PAPER_DEFAULT = True
+DRYRUN_DEFAULT = True
+IMAGES_IN = Path(os.getenv("IMAGES_IN_DIR", "data/images_in"))
+IMAGES_IN.mkdir(parents=True, exist_ok=True)
+PROCESSED_DIR = Path(os.getenv("IMAGES_PROCESSED_DIR", "data/images_processed"))
+PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = Path(os.getenv("LAVISH_DB", "data/lavish_vision.sqlite"))
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+ALPACA_KEY = os.getenv("ALPACA_API_KEY") or os.getenv("ALPACA_KEY")
+ALPACA_SECRET = os.getenv("ALPACA_SECRET_KEY") or os.getenv("ALPACA_SECRET")
+ALPACA_BASE_URL = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets/v2")
+
+# Patreon: token/RSS optional; watcher gracefully disables if missing
+PATREON_ACCESS_TOKEN = os.getenv("PATREON_ACCESS_TOKEN", "")
+PATREON_CAMPAIGN_ID = os.getenv("PATREON_CAMPAIGN_ID", "")
+PATREON_POLL_SECONDS = int(os.getenv("PATREON_POLL_SECONDS", "30"))
+
+# --------------------------- SQLite ---------------------------
+def _db() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS ocr_events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source TEXT,            -- 'patreon' or 'folder'
+      src_id TEXT,            -- post id or file name
+      ts_utc TEXT,
+      text LONGTEXT,
+      engine TEXT,            -- paddle|tesseract
+      conf REAL,
+      meta TEXT
+    )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS trade_decisions(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts_utc TEXT,
+      ticker TEXT,
+      side TEXT,              -- BUY/SELL
+      reason TEXT,            -- 'patreon_trigger' | 'ocr_trigger' | 'manual'
+      confidence REAL,
+      qty REAL,
+      dry_run INTEGER,
+      paper INTEGER,
+      sent INTEGER,
+      extra TEXT
+    )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS errors(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ts_utc TEXT,
+      where_at TEXT,
+      detail TEXT
+    )""")
+    conn.commit()
+    return conn
+
+# --------------------------- Safe imports ---------------------------
+def _try_import(path: str):
+    try:
+        __import__(path)
+        return sys.modules[path]
+    except Exception as e:
+        logger.debug(f"Optional module missing: {path} ({e})")
+        return None
+
+mod_patreon_watch = _try_import("lavish_core.patreon.watcher")
+mod_patreon_fetch = _try_import("lavish_core.patreon.fetch_posts")
+mod_patreon_parse = _try_import("lavish_core.patreon.parse_post")
+mod_patreon_dispatch = _try_import("lavish_core.patreon.dispatcher")
+
+mod_vision_watch = _try_import("lavish_core.vision.watcher")
+mod_ocr = _try_import("lavish_core.vision.ocr_engine")
+mod_parse_trig = _try_import("lavish_core.vision.parser_triggers")
+mod_precheck = _try_import("lavish_core.vision.pretrade_checklist")
+mod_executor = _try_import("lavish_core.vision.trade_executor")  # may route to trade_agent
+mod_risk = _try_import("lavish_core.vision.risk_bridge")
+
+mod_trade_agent = _try_import("lavish_core.trade.trade_agent")  # direct fallback
+
+# --------------------------- Utilities ---------------------------
+def utcnow() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+def sha1(s: str) -> str:
+    return hashlib.sha1(s.encode("utf-8", "ignore")).hexdigest()
+
+TICKER_RE = re.compile(r"\b([A-Z]{1,5})(?:\b|[^a-zA-Z])")
+BUY_WORDS = ("BUY", "CALL", "LONG", "OPEN", "ENTRY")
+SELL_WORDS = ("SELL", "PUT", "SHORT", "EXIT", "CLOSE", "TRIM", "TAKE PROFIT")
+
+@dataclass
+class Trigger:
+    ticker: str
+    side: str      # BUY or SELL
+    confidence: float
+    reason: str    # 'patreon_trigger' or 'ocr_trigger'
+    raw_text: str
+    meta: Dict[str, Any]
+
+# --------------------------- OCR (fallbacks if your engine missing) ---------------------------
+def _ocr_text_from_image(path: Path) -> Tuple[str, str, float]:
+    """
+    Returns (text, engine_name, confidence [0..1])
+    Uses your lavish_core.vision.ocr_engine if available. Otherwise, tries PaddleOCR then Tesseract.
+    """
+    # If user-provided OCR exists:
+    if mod_ocr:
+        try:
+            if hasattr(mod_ocr, "extract_text"):
+                out = mod_ocr.extract_text(str(path))
+                if isinstance(out, dict):
+                    return (out.get("text","").strip(), out.get("engine","custom"), float(out.get("confidence",0.65)))
+                elif isinstance(out, (list, tuple)) and len(out)>=2:
+                    return (str(out[0]).strip(), str(out[1]) if len(out)>1 else "custom", float(out[2] if len(out)>2 else 0.65))
+                else:
+                    return (str(out).strip(), "custom", 0.65)
+        except Exception as e:
+            logger.warning(f"OCR engine (custom) failed: {e}")
+
+    # PaddleOCR (if installed)
+    try:
+        from paddleocr import PaddleOCR
+        ocr = PaddleOCR(use_angle_cls=True, lang="en")
+        res = ocr.ocr(str(path), cls=True)
+        lines = []
+        confs = []
+        for page in res:
+            for box, (txt, conf) in page:
+                lines.append(txt)
+                confs.append(conf)
+        text = "\n".join(lines).strip()
+        conf = float(sum(confs)/len(confs)) if confs else 0.60
+        return (text, "paddle", conf)
+    except Exception:
+        pass
+
+    # Tesseract fallback
+    try:
+        import pytesseract
+        from PIL import Image
+        img = Image.open(path)
+        text = pytesseract.image_to_string(img)
+        # Dumb confidence proxy
+        conf = 0.55 if len(text) > 30 else 0.40
+        return (text.strip(), "tesseract", conf)
+    except Exception as e:
+        logger.error(f"OCR failed on {path}: {e}")
+        return ("", "none", 0.0)
+
+# --------------------------- Trigger parse (fallback) ---------------------------
+def _parse_triggers_from_text(text: str) -> List[Trigger]:
+    """
+    Use your parser_triggers if present; else heuristic:
+    - Find candidate tickers (A-Z up to 5 chars)
+    - Decide side from presence of BUY/SELL words
+    """
+    if mod_parse_trig and hasattr(mod_parse_trig, "parse_triggers"):
+        try:
+            items = mod_parse_trig.parse_triggers(text)
+            out: List[Trigger] = []
+            for it in items:
+                out.append(Trigger(
+                    ticker=it.get("ticker","").upper(),
+                    side=it.get("side","BUY").upper(),
+                    confidence=float(it.get("confidence",0.7)),
+                    reason=str(it.get("reason","ocr_trigger")),
+                    raw_text=text,
+                    meta=it.get("meta",{})
+                ))
+            return out
+        except Exception as e:
+            logger.warning(f"parser_triggers failed: {e}")
+
+    # Heuristic
+    up = text.upper()
+    side = "BUY" if any(w in up for w in BUY_WORDS) and not any(w in up for w in SELL_WORDS) else (
+           "SELL" if any(w in up for w in SELL_WORDS) and not any(w in up for w in BUY_WORDS) else "BUY")
+    tickers = {m.group(1) for m in TICKER_RE.finditer(up)}
+    # Filter common non-tickers
+    blacklist = {"USD","CEO","CFO","QQQ","ETF","FOMC","CPI"}
+    tickers = [t for t in tickers if 1<=len(t)<=5 and t not in blacklist]
+    conf = 0.70 if side=="BUY" else 0.68
+    return [Trigger(ticker=t, side=side, confidence=conf, reason="ocr_trigger", raw_text=text, meta={})
+            for t in tickers]
+
+# --------------------------- Pre-trade checklist (fallback) ---------------------------
+def _pretrade_ok(t: Trigger, paper: bool, dry_run: bool) -> Tuple[bool, str]:
+    """
+    Try user pretrade_checklist if present; else do basic checks:
+      - ticker format
+      - market schedule (simple: Mon-Fri 9:30-16:00 ET) unless dry_run
+    """
+    if mod_precheck and hasattr(mod_precheck, "verify"):
+        try:
+            ok, msg = mod_precheck.verify(asdict(t), paper=paper, dry_run=dry_run)
+            return bool(ok), str(msg)
+        except Exception as e:
+            logger.warning(f"pretrade_checklist failed: {e}")
+
+    if not re.fullmatch(r"[A-Z]{1,5}", t.ticker):
+        return (False, "Bad ticker format")
+    if dry_run:
+        return (True, "Dry-run bypass market hours")
+    # crude market window check in ET
+    # (simple guard; your own pretrade module should replace this)
+    now = datetime.utcnow()
+    # Mon=0..Sun=6
+    if now.weekday()>4:
+        return (False, "Market closed (weekend)")
+    # approx ET by subtracting 4 hours (no DST handling here; replace with exchange calendar later)
+    hour_et = (now.hour - 4) % 24
+    hm = hour_et*60 + now.minute
+    if hm < 9*60+30 or hm > 16*60:
+        return (False, "Market closed (outside 9:30–16:00 ET)")
+    return (True, "Basic checks passed")
+
+# --------------------------- Trade execution ---------------------------
+def _execute_trade(t: Trigger, qty: float, paper: bool, dry_run: bool) -> Tuple[bool, str]:
+    """
+    Prefer user's vision.trade_executor or trade.trade_agent
+    Expected callable signatures (accepted variants):
+      - trade_executor.execute(trigger_dict, qty, paper=True, dry_run=True)
+      - trade_agent.place_order(ticker, side, qty, paper=True, dry_run=True)
+    """
+    if dry_run:
+        return (True, f"[DRY] {t.side} {qty} {t.ticker}")
+
+    # Prefer your routing executor if available
+    if mod_executor and hasattr(mod_executor, "execute"):
+        try:
+            ok, msg = mod_executor.execute(asdict(t), qty=qty, paper=paper, dry_run=False)
+            return (bool(ok), str(msg))
+        except Exception as e:
+            logger.warning(f"trade_executor failed: {e}")
+
+    # Fallback: direct agent
+    if mod_trade_agent:
+        try:
+            if hasattr(mod_trade_agent, "place_order"):
+                res = mod_trade_agent.place_order(
+                    ticker=t.ticker, side=t.side, qty=qty, paper=paper, dry_run=False
+                )
+                # allow bool or (bool, str)
+                if isinstance(res, tuple) and len(res)>=2:
+                    return (bool(res[0]), str(res[1]))
+                return (True, "order sent")
+        except Exception as e:
+            logger.error(f"trade_agent.place_order failed: {e}")
+            return (False, f"trade agent error: {e}")
+    return (False, "No trade executor available")
+
+# --------------------------- Sizing / risk (simple baseline) ---------------------------
+def _position_size(t: Trigger) -> float:
+    """
+    Simple baseline: constant 10 shares; if you have risk_bridge with sizing(), we use that.
+    """
+    if mod_risk and hasattr(mod_risk, "sizing"):
+        try:
+            sz = mod_risk.sizing(asdict(t))
+            return float(sz)
+        except Exception as e:
+            logger.warning(f"risk_bridge.sizing failed: {e}")
+    return 10.0
+
+# --------------------------- Recorders ---------------------------
+def _record_ocr(conn: sqlite3.Connection, source: str, src_id: str, text: str, engine: str, conf: float, meta: Dict[str,Any]):
+    conn.execute("INSERT INTO ocr_events(source,src_id,ts_utc,text,engine,conf,meta) VALUES(?,?,?,?,?,?,?)",
+                 (source, src_id, utcnow(), text, engine, conf, json.dumps(meta)))
+    conn.commit()
+
+def _record_decision(conn: sqlite3.Connection, t: Trigger, qty: float, dry_run: bool, paper: bool, sent: bool, extra: str):
+    conn.execute("""INSERT INTO trade_decisions(ts_utc,ticker,side,reason,confidence,qty,dry_run,paper,sent,extra)
+                    VALUES(?,?,?,?,?,?,?,?,?,?)""",
+                 (utcnow(), t.ticker, t.side, t.reason, t.confidence, qty, int(dry_run), int(paper), int(sent), extra))
+    conn.commit()
+
+def _record_error(conn: sqlite3.Connection, where_at: str, detail: str):
+    conn.execute("INSERT INTO errors(ts_utc,where_at,detail) VALUES(?,?,?)",
+                 (utcnow(), where_at, detail))
+    conn.commit()
+
+# --------------------------- Patreon watcher (built-in) ---------------------------
+async def _patreon_loop(push_image: Callable[[Path, Dict[str,Any]], None], poll_seconds: int):
+    """
+    If your patreon modules exist, we use them.
+    Otherwise, this acts as a placeholder that does nothing unless PATREON_ACCESS_TOKEN present.
+    """
+    if not PATREON_ACCESS_TOKEN:
+        logger.info("Patreon token not set; Patreon watcher disabled.")
+        return
+
+    logger.info(f"{_Color.B}Patreon watcher active (every {poll_seconds}s){_Color.D}")
+    seen: set[str] = set()
+    while True:
+        try:
+            if mod_patreon_watch and hasattr(mod_patreon_watch, "fetch_new_items"):
+                items = mod_patreon_watch.fetch_new_items(PATREON_ACCESS_TOKEN, PATREON_CAMPAIGN_ID)
+            elif mod_patreon_fetch and hasattr(mod_patreon_fetch, "fetch_recent"):
+                items = mod_patreon_fetch.fetch_recent(PATREON_ACCESS_TOKEN, PATREON_CAMPAIGN_ID)
+            else:
+                # If no modules: skip (user can drop images into folder to trigger flow)
+                items = []
+
+            for it in items or []:
+                pid = str(it.get("id") or it.get("url") or sha1(json.dumps(it)))
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                # If item has image URL(s), download to IMAGES_IN
+                imgs = it.get("images") or []
+                for idx, url in enumerate(imgs):
+                    try:
+                        import requests
+                        fn = f"patreon_{pid}_{idx}.jpg"
+                        out = IMAGES_IN / fn
+                        r = requests.get(url, timeout=20)
+                        r.raise_for_status()
+                        out.write_bytes(r.content)
+                        meta = {"post_id": pid, "src":"patreon", "url": url}
+                        push_image(out, meta)
+                        logger.info(f"{_Color.G}Patreon image queued:{_Color.D} {out.name}")
+                    except Exception as e:
+                        logger.warning(f"Download fail {url}: {e}")
+        except Exception as e:
+            logger.error(f"Patreon loop error: {e}")
+        await asyncio.sleep(poll_seconds)
+
+# --------------------------- Folder watcher ---------------------------
+async def _folder_loop(push_image: Callable[[Path, Dict[str,Any]], None], scan_seconds: int = 2):
+    logger.info(f"{_Color.B}Folder watcher active on {IMAGES_IN.resolve()} (scan {scan_seconds}s){_Color.D}")
+    seen = set()
+    while True:
+        try:
+            for p in IMAGES_IN.iterdir():
+                if not p.is_file(): 
+                    continue
+                if p.suffix.lower() not in (".png",".jpg",".jpeg",".webp",".bmp",".tif",".tiff",".gif",".heic"):
+                    continue
+                key = (p.name, p.stat().st_mtime)
+                if key in seen:
+                    continue
+                seen.add(key)
+                push_image(p, {"src":"folder"})
+        except Exception as e:
+            logger.error(f"Folder watcher error: {e}")
+        await asyncio.sleep(scan_seconds)
+
+# --------------------------- Pipeline glue ---------------------------
+class Pipeline:
+    def __init__(self, *, paper: bool, dry_run: bool, debug: bool):
+        self.paper = paper
+        self.dry_run = dry_run
+        self.debug = debug
+        self.conn = _db()
+        # safety banner
+        mode = "PAPER" if self.paper else "LIVE"
+        dr = "DRY-RUN" if self.dry_run else "ORDERS-ENABLED"
+        logger.info(f"{_Color.Y}Boot mode: {mode} | {dr}{_Color.D}")
+        if not self.dry_run and not (ALPACA_KEY and ALPACA_SECRET):
+            logger.warning("Alpaca keys missing; forcing dry-run.")
+            self.dry_run = True
+
+    def push_image(self, path: Path, meta: Dict[str,Any]):
+        """
+        Synchronous enqueue → immediate process (simple serial to keep robust).
+        Swap to real queue/worker later if desired.
+        """
+        asyncio.create_task(self._process_image(path, meta))
+
+    async def _process_image(self, path: Path, meta: Dict[str,Any]):
+        try:
+            logger.info(f"{_Color.Y}OCR:{_Color.D} {path.name}")
+            text, engine, conf = _ocr_text_from_image(path)
+            self._record_ocr_safe(meta, path.name, text, engine, conf)
+            if not text.strip():
+                logger.warning(f"OCR empty for {path.name}")
+                self._archive(path, ok=False)
+                return
+
+            # Parse triggers
+            triggers = _parse_triggers_from_text(text)
+            if not triggers:
+                logger.info(f"No triggers detected in {path.name}")
+                self._archive(path, ok=True)
+                return
+
+            # Act on triggers
+            for trig in triggers:
+                ok, msg = _pretrade_ok(trig, paper=self.paper, dry_run=self.dry_run)
+                if not ok:
+                    logger.info(f"{_Color.B}Checklist blocked {trig.ticker}:{_Color.D} {msg}")
+                    self._record_decision_safe(trig, qty=0, sent=False, extra=f"blocked: {msg}")
+                    continue
+
+                qty = _position_size(trig)
+                sent, detail = _execute_trade(trig, qty=qty, paper=self.paper, dry_run=self.dry_run)
+                color = _Color.G if sent else _Color.R
+                logger.info(f"{color}{'SENT' if sent else 'FAIL'}:{_Color.D} {trig.side} {qty} {trig.ticker} | {detail}")
+                self._record_decision_safe(trig, qty=qty, dry_run=self.dry_run, paper=self.paper, sent=sent, extra=detail)
+
+            self._archive(path, ok=True)
+        except Exception as e:
+            logger.error(f"process_image error: {e}")
+            _record_error(self.conn, "process_image", str(e))
+            self._archive(path, ok=False)
+
+    def _record_ocr_safe(self, meta: Dict[str,Any], src_id: str, text: str, engine: str, conf: float):
+        try:
+            _record_ocr(self.conn, source=meta.get("src","folder"), src_id=src_id, text=text, engine=engine, conf=conf, meta=meta)
+        except Exception as e:
+            logger.warning(f"record_ocr failed: {e}")
+
+    def _record_decision_safe(self, trig: Trigger, qty: float, dry_run: Optional[bool]=None, paper: Optional[bool]=None, sent: bool=False, extra: str=""):
+        try:
+            _record_decision(
+                self.conn, trig, qty,
+                dry_run=self.dry_run if dry_run is None else dry_run,
+                paper=self.paper if paper is None else paper,
+                sent=sent, extra=extra
+            )
+        except Exception as e:
+            logger.warning(f"record_decision failed: {e}")
+
+    def _archive(self, path: Path, ok: bool):
+        try:
+            dest = PROCESSED_DIR / ("ok_" if ok else "fail_") / datetime.utcnow().strftime("%Y%m%d")
+            dest.mkdir(parents=True, exist_ok=True)
+            newp = dest / path.name
+            path.rename(newp)
+        except Exception:
+            pass
+
+# --------------------------- CLI ---------------------------
+def _argparse():
+    import argparse
+    p = argparse.ArgumentParser(
+        description="Lavish Vision Orchestrator — Patreon/Images → OCR → Triggers → Trades",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--live", action="store_true", help="Send real orders to LIVE Alpaca (danger!)")
+    g.add_argument("--paper", action="store_true", help="Use Alpaca paper (default)")
+    p.add_argument("--orders", action="store_true", help="Enable order placement (disable dry-run)")
+    p.add_argument("--debug", action="store_true", help="Verbose logging")
+    p.add_argument("--no-patreon", action="store_true", help="Disable Patreon watcher")
+    p.add_argument("--images-in", type=str, default=str(IMAGES_IN), help="Folder to watch for images")
+    p.add_argument("--patreon-interval", type=int, default=PATREON_POLL_SECONDS, help="Patreon polling seconds")
+    p.add_argument("--scan-interval", type=int, default=2, help="Folder scan seconds")
+    return p.parse_args()
+
+async def _amain():
+    args = _argparse()
+
+    # adjust globals based on CLI
+    global IMAGES_IN
+    IMAGES_IN = Path(args.images_in); IMAGES_IN.mkdir(parents=True, exist_ok=True)
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+        logger.info("Debug mode ON")
+
+    paper = PAPER_DEFAULT
+    if args.live: paper = False
+    if args.paper: paper = True
+
+    dry_run = DRYRUN_DEFAULT
+    if args.orders: dry_run = False
+
+    # Safety banner
+    logger.info(_Color.Y + ("="*72) + _Color.D)
+    logger.info(f"  PAPER: {paper}   DRY_RUN: {dry_run}   PATREON: {not args.no_patreon}")
+    logger.info(f"  IMAGES_IN: {str(IMAGES_IN.resolve())}")
+    logger.info(_Color.Y + ("="*72) + _Color.D)
+
+    # Hard guard: block LIVE+orders if no Alpaca keys
+    if not dry_run and not paper and not (ALPACA_KEY and ALPACA_SECRET):
+        logger.error("LIVE orders requested but Alpaca keys missing; forcing DRY-RUN.")
+        dry_run = True
+
+    pipe = Pipeline(paper=paper, dry_run=dry_run, debug=args.debug)
+
+    # signal handling
+    stop = asyncio.Event()
+    for s in (signal.SIGINT, signal.SIGTERM):
+        try:
+            asyncio.get_running_loop().add_signal_handler(s, stop.set)
+        except NotImplementedError:
+            pass
+
+    tasks: List[asyncio.Task] = []
+    # Folder watcher always on
+    tasks.append(asyncio.create_task(_folder_loop(pipe.push_image, scan_seconds=args.scan_interval)))
+
+    # Patreon watcher optional
+    if not args.no_patreon:
+        tasks.append(asyncio.create_task(_patreon_loop(pipe.push_image, poll_seconds=args.patreon_interval)))
+    else:
+        logger.info("Patreon watcher disabled by flag.")
+
+    logger.info(f"{_Color.G}Orchestrator running. Drop images into {IMAGES_IN} or let Patreon fetch drive them.{_Color.D}")
+    await stop.wait()
+    logger.info("Stopping tasks...")
+    for t in tasks:
+        t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+    logger.info("Bye.")
+
+def main():
+    try:
+        asyncio.run(_amain())
+    except KeyboardInterrupt:
+        pass
+
+if __name__ == "__main__":
+    main()

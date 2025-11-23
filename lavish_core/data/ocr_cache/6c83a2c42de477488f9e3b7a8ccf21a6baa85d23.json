@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2077.PNG",
+  "cache_key": "6c83a2c42de477488f9e3b7a8ccf21a6baa85d23",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:38 a) 5G+ @ ) < Posts thestockalley Gs. = thestockalley AMD AMD $224.02 © A $12.50 (5.91%) Today 24 Hour Market Ose Q5 W4 W thestockalley | added the AMD trade to the bio if you want to get in. | can’t make promises, but | believe this is the one that's going to make Christmas special. We will see. Link in bio. @ @Q 6",
+  "parsed": {},
+  "duration_sec": 6.091
+}

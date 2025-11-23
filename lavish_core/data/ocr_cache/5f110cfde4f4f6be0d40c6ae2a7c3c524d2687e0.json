@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2133.PNG",
+  "cache_key": "5f110cfde4f4f6be0d40c6ae2a7c3c524d2687e0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 al) LTE @ ) < Posts thestockalley 2 Q6 Vs A thestockalley Money has been made. You're welcome. September 29 Gets, = thestockalley Ox Q1 V7 W thestockalley Swing trade in the green before the close. Earnings are today. You either take profits now or hold it and risk it all. Good luck! September 29 @ a eo",
+  "parsed": {},
+  "duration_sec": 6.743
+}

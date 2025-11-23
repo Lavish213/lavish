@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2094.PNG",
+  "cache_key": "3e9d3d0f80a21bc4c7949aaf9fa65f6776a3cc06",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ot) 5G+ ©) < Posts thestockalley &% thestockalley MSTR Strategy Inc. $362.07 ® A $10.44 (2.97%) Pre-market 24 Hour Market O37 Ws W thestockalley MSTR printed. If you didn’t sell Friday, you can sell at the open. 3 days ago @ @Q 6",
+  "parsed": {},
+  "duration_sec": 7.51
+}

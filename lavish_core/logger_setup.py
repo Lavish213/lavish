@@ -1,0 +1,33 @@
+# lavish_core/logger_setup.py
+from __future__ import annotations
+import logging, sys
+from pathlib import Path
+from datetime import datetime, timezone
+
+def get_logger(name: str, log_dir: str | Path | None = None) -> logging.Logger:
+    logger = logging.getLogger(name)
+    if logger.handlers:
+        return logger
+
+    logger.setLevel(logging.INFO)
+
+    fmt = logging.Formatter("%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+                            datefmt="%H:%M:%S")
+    sh = logging.StreamHandler(sys.stdout)
+    sh.setFormatter(fmt)
+    logger.addHandler(sh)
+
+    if log_dir:
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(Path(log_dir) / f"{name}.log", encoding="utf-8")
+        fh.setFormatter(fmt)
+        logger.addHandler(fh)
+
+    # add tiny CSV helper
+    def csv_line(event: str, data: str, level: str = "INFO"):
+        ts = datetime.now(timezone.utc).isoformat()
+        line = f"{ts},{event},{data}"
+        getattr(logger, level.lower(), logger.info)(line)
+
+    logger.csv_line = csv_line  # type: ignore[attr-defined]
+    return logger

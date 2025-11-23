@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2127.PNG",
+  "cache_key": "0de28aa533823d6a78b52d0f04eda93164f5a944",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G © ) < Posts thestockalley $141.91 ® A $5.19 (3.79%) Today 24 Hour Market Ov7 Qi vy W thestockalley Free trade still printing ... September 30 &% thestockalley The Stock Alley Home Posts Shop",
+  "parsed": {},
+  "duration_sec": 7.115
+}

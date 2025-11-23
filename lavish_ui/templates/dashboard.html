@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lavish – Wall Street Console</title>
+
+  <!-- GLOBAL SHARED CSS -->
+  <link rel="stylesheet" href="/shared/base.css">
+  <link rel="stylesheet" href="/shared/layout.css">
+  <link rel="stylesheet" href="/shared/lighting.css">
+  <link rel="stylesheet" href="/shared/animations.css">
+
+  <!-- DASHBOARD CSS -->
+  <link rel="stylesheet" href="/dashboard/dashboard.css">
+
+  <!-- JS -->
+  <script src="/shared/lavish-config.js" defer></script>
+  <script src="/shared/lavish-utils.js" defer></script>
+  <script src="/dashboard/dashboard.js" defer></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body class="lavish-body lavish-dashboard-body" data-page="dashboard">
+
+  <div class="lavish-shell">
+    <!-- Sidebar -->
+    <aside class="lavish-sidebar">
+      <div class="lavish-sidebar-logo">L</div>
+
+      <nav class="lavish-nav">
+        <button class="nav-item" data-target="/home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">Home</span>
+        </button>
+        <button class="nav-item nav-item-active" data-target="/dashboard">
+          <span class="nav-icon">🧠</span>
+          <span class="nav-label">Console</span>
+        </button>
+        <button class="nav-item" data-target="/achievements">
+          <span class="nav-icon">🏅</span>
+          <span class="nav-label">Achievements</span>
+        </button>
+        <button class="nav-item" data-target="/settings">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </button>
+      </nav>
+
+      <div class="lavish-sidebar-footer">
+        <span class="sidebar-mode-pill" id="sidebar-mode">MODE: PAPER</span>
+        <button class="sidebar-logout-btn">Logout / Reset</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="lavish-main">
+
+      <!-- Topbar -->
+      <header class="lavish-topbar">
+        <div class="topbar-left">
+          <h1 class="page-title">Lavish Console</h1>
+          <p class="page-subtitle">Live equity, positions & AI commentary.</p>
+        </div>
+
+        <div class="topbar-right">
+          <div class="status-pill">
+            <span class="status-dot status-dot-offline" id="status-dot-core"></span>
+            <span id="status-text-core">Connecting…</span>
+          </div>
+          <div class="market-open-pill">
+            Market opens in <span id="market-countdown" class="countdown-text">--:--:--</span>
+          </div>
+          <span id="dashboard-clock" class="lavish-clock"></span>
+        </div>
+      </header>
+
+      <!-- GRID -->
+      <section class="lavish-grid lavish-grid-dashboard">
+
+        <!-- ACCOUNT OVERVIEW -->
+        <article class="card card-account">
+          <header class="card-header">
+            <h2 class="card-title">Account Overview</h2>
+          </header>
+          <div class="card-body">
+            <div class="metric-block">
+              <div class="metric-label">Total Equity</div>
+              <div id="equity-value" class="metric-value">$0.00</div>
+            </div>
+            <div class="metric-row">
+              <div>
+                <div class="metric-label">Buying Power</div>
+                <div id="bp-value" class="metric-subvalue">$0.00</div>
+              </div>
+              <div>
+                <div class="metric-label">Open Positions</div>
+                <div id="open-positions-count" class="metric-subvalue">0</div>
+              </div>
+            </div>
+            <div id="equity-change" class="metric-pnl">Day P&L: $0.00</div>
+            <div id="risk-light-label" class="metric-risk">Risk light: —</div>
+          </div>
+        </article>
+
+        <!-- AI CONSOLE -->
+        <article class="card card-ai">
+          <header class="card-header">
+            <h2 class="card-title">Lavish Thinks…</h2>
+            <span id="ai-mode-label" class="meta-chip meta-chip-gold">Wall Street</span>
+          </header>
+          <div class="card-body">
+            <div class="ai-row">
+              <div>
+                <div class="meta-label">7-day Accuracy</div>
+                <div id="ai-accuracy" class="ai-accuracy">–%</div>
+              </div>
+              <div>
+                <div class="meta-label">Bias</div>
+                <div id="ai-bias-chip" class="meta-chip meta-chip-neutral">Neutral</div>
+              </div>
+            </div>
+            <p id="ai-main-text" class="ai-main-text">Waiting for Lavish Core…</p>
+          </div>
+        </article>
+
+        <!-- RISK & SENTIMENT -->
+        <article class="card card-risk">
+          <header class="card-header">
+            <h2 class="card-title">Risk & Sentiment</h2>
+          </header>
+          <div class="card-body">
+            <div class="risk-meter-track">
+              <div id="risk-meter-handle" class="risk-meter-handle"></div>
+            </div>
+            <div class="risk-row">
+              <span id="sentiment-label" class="risk-label">Neutral</span>
+              <span id="heat-label" class="risk-heat">0%</span>
+              <span id="risk-chip" class="risk-chip">Unknown</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- OPEN POSITIONS -->
+        <article class="card card-positions">
+          <header class="card-header">
+            <h2 class="card-title">Open Positions</h2>
+            <button id="btn-refresh-positions" class="pill-button">Refresh</button>
+          </header>
+          <div class="card-body">
+            <table class="lavish-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Qty</th>
+                  <th>Avg Price</th>
+                  <th>Last</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody id="positions-body">
+                <tr class="table-empty">
+                  <td colspan="5">Loading positions from Lavish Core…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <!-- NEWS -->
+        <article class="card card-news">
+          <header class="card-header">
+            <h2 class="card-title">News & Signals</h2>
+          </header>
+          <div class="card-body">
+            <ul id="dashboard-news-list" class="news-list">
+              <li class="news-item news-item-placeholder">Waiting for today's key headlines…</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- JOURNAL -->
+        <article class="card card-journal">
+          <header class="card-header">
+            <h2 class="card-title">Recent Journal</h2>
+            <button id="btn-refresh-journal" class="pill-button">Refresh</button>
+          </header>
+          <div id="journal-list" class="card-body journal-list">
+            <div class="journal-empty">Loading journal entries…</div>
+          </div>
+        </article>
+
+        <!-- SYSTEM HEALTH -->
+        <article class="card card-system">
+          <header class="card-header">
+            <h2 class="card-title">System State</h2>
+            <button id="btn-health-check" class="pill-button pill-button-outline">Health Check</button>
+          </header>
+          <ul id="state-list" class="card-body state-list">
+            <li class="state-item">
+              <span class="state-dot state-dot-muted"></span>
+              <span class="state-text">Waiting for first health check…</span>
+            </li>
+          </ul>
+        </article>
+
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div id="lavish-toast" class="lavish-toast hidden"></div>
+
+</body>
+</html>

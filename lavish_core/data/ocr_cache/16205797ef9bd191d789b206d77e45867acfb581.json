@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2073.PNG",
+  "cache_key": "16205797ef9bd191d789b206d77e45867acfb581",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:38 ot) 5G+ (|) < Posts thestockalley OuQ V1 W thestockalley On the hunt today. Link in bio 12 hours ago Ges. = thestockalley $1,137.56 | 24. O27 Q7 V7 W thestockalley If you bought the trade when | told you 30 mins ago you're already up nicely . .. 12 hours ago Gets, = thestockalley PayPal $76.35 ® A $1.74 (2.33%) Today @ a eo",
+  "parsed": {},
+  "duration_sec": 9.961
+}

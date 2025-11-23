@@ -1,0 +1,3 @@
+{
+  "raw_summary": "```json\n{\n  \"symbols\": [\"DOGE\"],\n  \"actions\": [\"take profits\"],\n  \"targets\": [\"$0.26\", \"$0.24\"],\n  \"stops\": [\"$0.21\"],\n  \"timeframe\": \"1H\",\n  \"notes\": \"If you took profits before the close, smart move.\"\n}\n```"
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2207.PNG",
+  "cache_key": "e39da7ad09a5260279344cc9ae24b08afd853ce5",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "oll LTE © ») Posts thestockalley HOOD Robinhood Markets Today $2.83 (2.39%) Overnight O2Q4 7 W thestockalley Back in August | said to buy the dip on the Robinhood trade and hold @) ¢ September 9 gv thestockallev ay",
+  "parsed": {},
+  "duration_sec": 7.938
+}

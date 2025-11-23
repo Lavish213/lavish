@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2110.PNG",
+  "cache_key": "3d3c735b740db53bc1c4555c1629cfee305f88ca",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley &% thestockalley On Q5 V3 thestockalley It will mess up my average but | have to take advantage of the opportunity. This trade is still available to all. It’s in the bio. The $9k one. October 1 @& thestockalley W",
+  "parsed": {},
+  "duration_sec": 7.167
+}

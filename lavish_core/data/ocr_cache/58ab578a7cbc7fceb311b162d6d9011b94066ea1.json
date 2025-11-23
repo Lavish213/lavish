@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2115.PNG",
+  "cache_key": "58ab578a7cbc7fceb311b162d6d9011b94066ea1",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G © ) < Posts thestockalley SPDR S&P 500 ETF $666.90 © A $0.72 (0.11%) Today 24 Hour Market OB Q1 V7 W thestockalley 10 cent away from the target, sell 95% and leave the rest remaining... October 1 Gs. = thestockalley SPY @| @ @Q 6H",
+  "parsed": {},
+  "duration_sec": 6.658
+}

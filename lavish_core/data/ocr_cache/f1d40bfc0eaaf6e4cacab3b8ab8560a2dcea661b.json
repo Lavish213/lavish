@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2196.PNG",
+  "cache_key": "f1d40bfc0eaaf6e4cacab3b8ab8560a2dcea661b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © < Posts thestockalley &% thestockalley SPY SPDR S&P 500 ETF $657.4° © A $5.26 (0.81%) Today 24 Hour Market Ox%Q V W thestockalley Spy and tesla trades are up much more today. Take profits on spy today. September 11 @ 6",
+  "parsed": {},
+  "duration_sec": 8.395
+}

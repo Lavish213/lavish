@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2120.PNG",
+  "cache_key": "72f582605a6da42cb2e9ecf0b589483aea8441d6",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 5G < Posts thestockalley @& thestockalley 92x QV W thestockalley Spy trade is up, sell 80% and ride the others to the target . Day done already. October 1 @& thestockalley",
+  "parsed": {},
+  "duration_sec": 6.763
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2203.PNG",
+  "cache_key": "56d2c62b68af72908e62dec61bf1453835d69888",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © < Posts thestockalley CRWV GB CoreWeave $121.49 © A $21.27 (21.22%) Today 24 Hour Market 107 Q2 V2 W thestockalley Congrats sis & & & September 10 @& thestockalley @ a 8",
+  "parsed": {},
+  "duration_sec": 7.829
+}

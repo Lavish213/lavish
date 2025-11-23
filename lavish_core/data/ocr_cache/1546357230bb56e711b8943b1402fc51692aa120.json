@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2162.PNG",
+  "cache_key": "1546357230bb56e711b8943b1402fc51692aa120",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 ob LTE © < Posts thestockalley WEE. LUITSLUULHNRACy AppLovin $663.87 © A $20.36 (3.16%) Today 24 Hour Market 2 Q173 A baaaa lord. Again, take profits when green & & September 23 @ 6",
+  "parsed": {},
+  "duration_sec": 6.79
+}

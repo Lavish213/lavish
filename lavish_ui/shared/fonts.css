@@ -1,0 +1,31 @@
+/* shared/fonts.css
+   Font stack + CSS variables for typography
+*/
+
+@font-face {
+  font-family: "LavishDisplay";
+  src: url("/assets/fonts/Orbitron-Variable.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "LavishMono";
+  src: url("/assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --lavish-font-body: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Segoe UI", sans-serif;
+
+  --lavish-font-display: "LavishDisplay", system-ui, sans-serif;
+
+  --lavish-font-mono: "LavishMono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+body {
+  font-family: var(--lavish-font-body);
+}

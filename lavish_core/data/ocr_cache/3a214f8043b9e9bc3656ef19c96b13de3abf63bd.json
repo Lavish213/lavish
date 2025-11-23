@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2096.PNG",
+  "cache_key": "3a214f8043b9e9bc3656ef19c96b13de3abf63bd",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ob 5G+ < Posts thestockalley Wadlit. o€& yuu iviuiiuday. 6 days ago ge. thestockalley This stock has a buy signal and options are affordable. Aug 11,2025 at 5:44 PM e $40 2,720 Impressions $1,675.36 Earnings O37 Q3 V2 W thestockalley Printing money today. | have some bangers in my bio that are still good to get in. Don't sleep on me. 6 days ago ge thestockalley",
+  "parsed": {},
+  "duration_sec": 8.132
+}

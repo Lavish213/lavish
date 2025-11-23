@@ -1,0 +1,182 @@
+/* === Lavish Theme – nav, topbar, gold accents === */
+
+.lavish-sidebar {
+  width: var(--lavish-nav-width);
+  background: radial-gradient(circle at top, #0b1220, #020617 70%);
+  border-right: 1px solid rgba(15, 23, 42, 0.9);
+  box-shadow: 12px 0 45px rgba(0, 0, 0, 0.8);
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.lavish-logo-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 193, 93, 0.65);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(244, 193, 93, 0.3), transparent 60%),
+    radial-gradient(circle at 90% 100%, rgba(45, 222, 152, 0.25), transparent 60%),
+    #020617;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Orbitron", system-ui, sans-serif;
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  color: var(--lavish-gold-strong);
+  box-shadow: 0 0 22px rgba(244, 193, 93, 0.5);
+}
+
+.lavish-nav {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lavish-nav-item {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--lavish-text-muted);
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  border: 1px solid rgba(31, 41, 55, 0.9);
+  cursor: pointer;
+  transition: transform var(--lavish-transition-fast),
+    box-shadow var(--lavish-transition-fast),
+    border-color var(--lavish-transition-fast),
+    color var(--lavish-transition-fast),
+    background var(--lavish-transition-fast);
+}
+
+.lavish-nav-item span {
+  font-size: 16px;
+}
+
+.lavish-nav-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(244, 193, 93, 0.5);
+  color: var(--lavish-gold-strong);
+}
+
+.lavish-nav-item-active {
+  background: radial-gradient(circle at top left, #f4c15d, #b98c37);
+  color: #020617;
+  border-color: transparent;
+  box-shadow: 0 0 22px rgba(244, 193, 93, 0.8);
+}
+
+/* Top bar */
+
+.lavish-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.lavish-topbar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lavish-topbar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.lavish-topbar-title span:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.lavish-topbar-sub {
+  font-size: 12px;
+  color: var(--lavish-text-muted);
+}
+
+.lavish-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--lavish-radius-pill);
+  background: radial-gradient(circle at top left, #022c22, #020617);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  font-size: 11px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #4b5563;
+}
+
+.status-dot-online {
+  background: #22c55e;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.8);
+}
+
+.status-dot-offline {
+  background: #f97373;
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.7);
+}
+
+.lavish-clock {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--lavish-radius-pill);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.7);
+}
+
+/* Toast */
+
+.lavish-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border-radius: var(--lavish-radius-pill);
+  background: radial-gradient(circle at top left, #0f172a, #020617);
+  border: 1px solid rgba(244, 193, 93, 0.4);
+  color: var(--lavish-text-primary);
+  font-size: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out, transform 220ms ease-out;
+  z-index: 50;
+}
+
+.lavish-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, -6px);
+  pointer-events: auto;
+}
+
+.lavish-toast.hidden {
+  opacity: 0;
+  transform: translate(-50%, 4px);
+}

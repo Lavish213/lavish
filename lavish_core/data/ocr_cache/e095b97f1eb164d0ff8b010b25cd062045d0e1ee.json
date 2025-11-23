@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2216.PNG",
+  "cache_key": "e095b97f1eb164d0ff8b010b25cd062045d0e1ee",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 atl LTE Posts < thestockalley © 545 C)2 Ya A thestockalley 3 September 8 gts. thestockalley Long term option up $80 now Tesla swing up W Very Cheap Call option up F O04 Q2 71 W thestockalley Looking good so far } September 8 gts. thestockalley @ 8",
+  "parsed": {},
+  "duration_sec": 7.007
+}

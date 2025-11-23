@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2125.PNG",
+  "cache_key": "ade92fa5f2e4e9d59e8e156dacafc323bb22d95f",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G < Posts thestockalley $1,839.65 | 22.11% 9x2 Q5 V7 W thestockalley $1,800 in two hours on the APP trade, not bad. September 30 @& thestockalley",
+  "parsed": {},
+  "duration_sec": 6.762
+}

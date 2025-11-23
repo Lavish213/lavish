@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2186.PNG",
+  "cache_key": "d9386e444127d19b6385360b7853ab5214b3289e",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 al LTE ©») < Posts thestockalley 3 September 16 Gs, = thestockalley Tesla trade for this week 23 hours ago Ow Q V1 W thestockalley | updated with a new trade on the same post on Patreon if you purchased it yesterday. September 16 Gs, = thestockalley UBER | @ 8",
+  "parsed": {},
+  "duration_sec": 6.57
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2210.PNG",
+  "cache_key": "8c8430d80bcacb8dece4a441124629a586984bac",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 al LTE © ) < Posts thestockalley LITSLULHNAIICYy OWIYy WauUe Ill MIU September 9 &% thestockalley $1,420.00 O73 Q4 V4 \\- thestockalley Investment flipped if you bought my last trade. Sell when you want. The target is always GREEN September 9 @v& thestockalley",
+  "parsed": {},
+  "duration_sec": 7.4
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2165.PNG",
+  "cache_key": "3bd51c36d8b0b189cc985294d09cbfee1dee920b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 etl LTE ' < Posts thestockalley Ow V7 W thestockalley I've updated this trade with a new position. Head to Patreon. September 23 gv thestockalley O27 Q V4 W thestockalley Powell speaks today so no new trades today ... we just ride what we have already. September 23 gv thestockalley @ @Q GH s",
+  "parsed": {},
+  "duration_sec": 7.242
+}

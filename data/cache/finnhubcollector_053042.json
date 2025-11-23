@@ -1,0 +1,21 @@
+{
+  "collector": "Finnhub",
+  "sentiment": "negative",
+  "items": [
+    {
+      "headline": "American Airlines is arriving late to the luxury travel boom. Can it catch up?"
+    },
+    {
+      "headline": "Most families don't talk about this important medical issue, psychologist says—how to have the conversation"
+    },
+    {
+      "headline": "I’m struggling to buy a house — should I settle for one with a bus stop right outside?"
+    },
+    {
+      "headline": "As mortgage rates near 6%, this key figure could unlock a refinancing wave after the Fed meeting"
+    },
+    {
+      "headline": "The biggest infrastructure spending cycle in American history is happening — whether Washington functions or not"
+    }
+  ]
+}

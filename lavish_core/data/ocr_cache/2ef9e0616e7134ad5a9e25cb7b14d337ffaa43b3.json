@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2188.PNG",
+  "cache_key": "2ef9e0616e7134ad5a9e25cb7b14d337ffaa43b3",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 al LTE ©») < Posts thestockalley September 15 Gs, = thestockalley Tesla $406.38 © A $10.44 (2.64%) Today 24 Hour Market 3% Q1 7: A thestockalley Stop loss hit, no one should be in. I'll post another one when it's ready. @ Q eo",
+  "parsed": {},
+  "duration_sec": 6.623
+}

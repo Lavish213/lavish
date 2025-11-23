@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2126.PNG",
+  "cache_key": "b370fe9ed9c49cabd910ba44047d6bdf4c45aeb0",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "Posts thestockalley © thestockalley $ The Stock Alley Home Posts Shop App Call (risky) Just now 2Q V thestockalley App trade available. Link in bio. 2 hours ago 9x2 Q5V W thestockalley $1,800 in two hours on the APP trade, not bad. September 30 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 2.093
+}

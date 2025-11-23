@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2118 2.PNG",
+  "cache_key": "c79fb95c71c2835542d17f0d8156de1dc064798c",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G OC ) < Posts thestockalley O72 Q1 V2 W thestockalley The first trade of the month printed for all. My instructions were clear, transparent and honest. Congrats! October 1 &% thestockalley The Stock Alley Home Posts Shop Cheap trade on Walmart Just now Ow Q V1 W thestockalley The second trade of the month is available. Link in bio to purchase individually if you don’t have a membership. October 1 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 6.979
+}

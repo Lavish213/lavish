@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2106 2.PNG",
+  "cache_key": "9554fd51ff3f8a815f751f6440388de76b778cfd",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley SPY SPDR S&P 500 ETF $670.62 © A $2.17 (0.32%) Pre-market 24 Hour Market O27 Q V1 A thestockalley Spy is above my second target; take profits at the open and call it a week. | don’t work on Fridays. 1 week ago gts = thestockalley @ @Q 6H",
+  "parsed": {},
+  "duration_sec": 7.651
+}

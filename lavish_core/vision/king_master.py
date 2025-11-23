@@ -1,0 +1,278 @@
+# lavish_core/vision/king_master.py
+from __future__ import annotations
+
+"""
+King Master — Vision Watcher (Wall Street Edition)
+--------------------------------------------------
+• Watches a folder of images, runs OCR (Tesseract), extracts intents
+• Writes parsed JSON to OUT_DIR, and routes trades via unified executor
+• Dedupe by file SHA1 + processed index
+• Ticker de-noising via optional whitelist (data/tickers.csv)
+• Batch limits and interval controls via env
+
+Env (defaults shown):
+  VISION_RAW_DIR=lavish_core/vision/raw
+  VISION_OUT_DIR=lavish_core/vision/parsed
+  VISION_BATCH_SIZE=100
+  VISION_BATCH_INTERVAL_SECONDS=900
+  VISION_MAX_TRADES_PER_BATCH=20
+  VISION_TICKERS_CSV=data/tickers.csv
+"""
+
+import os, io, re, time, json, threading, hashlib
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Dict, Set, List, Callable, Optional
+
+import pytesseract
+from PIL import Image
+from dotenv import load_dotenv
+
+# Local deps
+from lavish_core.logger_setup import get_logger
+
+# Optional unified trade executor (falls back to print if missing)
+try:
+    from lavish_core.trading.executor import execute_trade_from_post as _default_submit
+except Exception:
+    _default_submit = None
+
+load_dotenv()
+
+RAW_DIR   = Path(os.getenv("VISION_RAW_DIR", "lavish_core/vision/raw"))
+OUT_DIR   = Path(os.getenv("VISION_OUT_DIR", "lavish_core/vision/parsed"))
+BATCH     = int(os.getenv("VISION_BATCH_SIZE", "100"))
+INTERVAL  = int(os.getenv("VISION_BATCH_INTERVAL_SECONDS", "900"))
+MAX_TRADES_PER_BATCH = int(os.getenv("VISION_MAX_TRADES_PER_BATCH", "20"))
+TICKERS_CSV = Path(os.getenv("VISION_TICKERS_CSV", "data/tickers.csv"))
+
+OUT_DIR.mkdir(parents=True, exist_ok=True)
+(OUT_DIR / "logs").mkdir(parents=True, exist_ok=True)
+
+STATE_FILE = OUT_DIR / "processed_index.json"
+log = get_logger("vision.king_master", log_dir=OUT_DIR / "logs")
+
+# -------------------------- Regex & Stopwords --------------------------
+TICK_RE   = re.compile(r"\b([A-Z]{1,5})\b")
+ACTION_RE = re.compile(r"\b(BUY|SELL|SHORT|PUTS?|CALLS?)\b", re.I)
+PRICE_RE  = re.compile(r"\$?\s*(\d{1,4}(?:\.\d{1,2})?)")
+
+STOPWORDS = {
+    "A", "AN", "THE", "AND", "OR", "FOR", "WITH", "THIS", "THAT", "FROM", "TO",
+    "CALL", "CALLS", "PUT", "PUTS", "BUY", "SELL", "LONG", "SHORT",
+    "USD", "NEWS", "OPEN", "HIGH", "LOW", "CLOSE", "VOLUME"
+}
+
+# -------------------------- Helpers --------------------------
+def _sha1_bytes(b: bytes) -> str:
+    h = hashlib.sha1(); h.update(b); return h.hexdigest()
+
+def _read_bytes(path: Path) -> Optional[bytes]:
+    try:
+        return path.read_bytes()
+    except Exception as e:
+        log.csv_line("read_error", f"{path.name}:{e}", level="ERROR")
+        return None
+
+def _load_state() -> Set[str]:
+    try:
+        if STATE_FILE.exists():
+            return set(json.loads(STATE_FILE.read_text(encoding="utf-8")))
+    except Exception:
+        pass
+    return set()
+
+def _save_state(s: Set[str]) -> None:
+    try:
+        STATE_FILE.write_text(json.dumps(sorted(list(s))), encoding="utf-8")
+    except Exception as e:
+        log.csv_line("save_state_error", str(e), level="ERROR")
+
+def _load_ticker_whitelist() -> Optional[Set[str]]:
+    """
+    Optional CSV with columns: symbol, description (first row header ok).
+    If not present, returns None (no filter).
+    """
+    if not TICKERS_CSV.exists():
+        return None
+    wl: Set[str] = set()
+    try:
+        for i, line in enumerate(TICKERS_CSV.read_text(encoding="utf-8").splitlines()):
+            if i == 0 and "symbol" in line.lower():
+                continue
+            parts = [p.strip() for p in line.split(",")]
+            if parts:
+                sym = parts[0].upper()
+                if 1 <= len(sym) <= 5 and sym.isalpha():
+                    wl.add(sym)
+        log.csv_line("ticker_whitelist", f"loaded={len(wl)}")
+        return wl
+    except Exception as e:
+        log.csv_line("ticker_whitelist_error", str(e), level="ERROR")
+        return None
+
+# -------------------------- NLP/Parse --------------------------
+def extract_intent_from_text(text: str, whitelist: Optional[Set[str]] = None) -> Dict:
+    t_up = (text or "").upper()
+
+    # direction
+    action = "BUY"
+    m = ACTION_RE.search(t_up)
+    if m:
+        w = m.group(1).upper()
+        action = "SELL" if w in ("SELL", "SHORT") or "PUT" in w else "BUY"
+
+    # symbols
+    cands = {m.group(1).upper() for m in TICK_RE.finditer(t_up)}
+    cands = {c for c in cands if c not in STOPWORDS}
+    if whitelist is not None:
+        cands = {c for c in cands if c in whitelist}
+
+    # price hint (best-effort)
+    price = None
+    for pm in PRICE_RE.finditer(text or ""):
+        try:
+            v = float(pm.group(1).replace(",", ""))
+            if 0.01 <= v <= 100000:
+                price = v
+                break
+        except Exception:
+            continue
+
+    conf = 0.65 + (0.25 if m else 0.0) + (0.05 if cands else 0.0)
+    return {
+        "symbols": sorted(list(cands))[:5],
+        "action": action,
+        "confidence": float(min(conf, 0.98)),
+        "ref_price": price
+    }
+
+# -------------------------- OCR --------------------------
+def _ocr_text(img_bytes: bytes) -> str:
+    try:
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+        return pytesseract.image_to_string(img)
+    except Exception as e:
+        log.csv_line("ocr_error", str(e), level="ERROR")
+        return ""
+
+# -------------------------- Core Class --------------------------
+class VisionReader:
+    def __init__(self, submit: Optional[Callable[[Dict], None]] = None):
+        """
+        submit: callable(payload_dict) -> None
+                payload contains: source, action, symbol, confidence, amount_usd, note
+        If not provided and executor exists, uses unified execute_trade_from_post;
+        otherwise falls back to a safe print logger.
+        """
+        self.submit = submit or _default_submit or self._print_submit
+        self.done_names: Set[str] = _load_state()                 # processed file names (legacy)
+        self.done_hashes: Set[str] = set()                        # processed content hashes (session)
+        self.whitelist = _load_ticker_whitelist()
+        self._stop = threading.Event()
+
+        RAW_DIR.mkdir(parents=True, exist_ok=True)
+        OUT_DIR.mkdir(parents=True, exist_ok=True)
+
+        log.csv_line("init", f"raw={RAW_DIR} out={OUT_DIR} batch={BATCH} interval={INTERVAL}")
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
+
+    # Fallback submitter
+    @staticmethod
+    def _print_submit(payload: Dict) -> None:
+        log.csv_line("trade_submit_fallback", json.dumps(payload))
+
+    # Single image handler
+    def _handle_image(self, p: Path, img_bytes: bytes, trades_left: int) -> int:
+        fid = _sha1_bytes(img_bytes)
+        if fid in self.done_hashes:
+            log.csv_line("dup_hash_skip", p.name)
+            return trades_left
+
+        text = _ocr_text(img_bytes)
+        intent = extract_intent_from_text(text, self.whitelist)
+
+        out = {
+            "file": p.name,
+            "hash": fid,
+            "text_excerpt": (text or "")[:2000],
+            "intent": intent,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        (OUT_DIR / f"{p.stem}.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+        log.csv_line("parsed", f"{p.name}:{intent}")
+
+        # submit (respect batch limit)
+        for sym in intent["symbols"]:
+            if trades_left <= 0:
+                log.csv_line("trade_limit_reached", p.name, level="WARNING")
+                break
+            payload = {
+                "source": "vision",
+                "action": intent["action"],
+                "symbol": sym,
+                "confidence": intent["confidence"],
+                "amount_usd": None,
+                "note": f"vision:{p.name}"
+            }
+            try:
+                self.submit(payload)
+                trades_left -= 1
+            except Exception as e:
+                log.csv_line("submit_error", f"{sym}:{e}", level="ERROR")
+
+        self.done_names.add(p.name)
+        self.done_hashes.add(fid)
+        return trades_left
+
+    def _scan_batch(self) -> List[Path]:
+        imgs: List[Path] = []
+        for p in sorted(RAW_DIR.glob("*")):
+            if not p.is_file():
+                continue
+            if p.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"):
+                continue
+            if p.name in self.done_names:
+                continue
+            imgs.append(p)
+            if len(imgs) >= BATCH:
+                break
+        return imgs
+
+    def _loop(self):
+        while not self._stop.is_set():
+            try:
+                batch = self._scan_batch()
+                trades_left = MAX_TRADES_PER_BATCH
+                if not batch:
+                    log.csv_line("idle", "no_new_images")
+                for p in batch:
+                    b = _read_bytes(p)
+                    if not b:
+                        self.done_names.add(p.name)  # skip permanently if unreadable
+                        continue
+                    trades_left = self._handle_image(p, b, trades_left)
+                _save_state(self.done_names)
+            except Exception as e:
+                log.csv_line("vision_loop_error", str(e), level="ERROR")
+            finally:
+                self._stop.wait(INTERVAL)  # sleep, but allow graceful stop
+
+    def stop(self):
+        self._stop.set()
+        self.thread.join(timeout=5)
+
+# -------------------------- CLI --------------------------
+def main():
+    log.csv_line("start", "king_master_cli")
+    vr = VisionReader()  # uses unified executor if available
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        vr.stop()
+        log.csv_line("stop", "king_master_cli")
+
+if __name__ == "__main__":
+    main()

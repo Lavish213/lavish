@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2079.PNG",
+  "cache_key": "2561b7f65b909a1f8dc072fd1b16eab14381c89c",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 a) 5G+ @ ) < Posts thestockalley thestockalley My AMD trade on Patreon paying today ¢) ¢ 16 hours ago &% thestockalley A $28.60 (8.33%) Past week I Wcos Q3 Ve A boa Since adding in $50,000 to our leap option & 16 hours ago tt, thestockalley fi thestockalley - Original audio a 5",
+  "parsed": {},
+  "duration_sec": 6.535
+}

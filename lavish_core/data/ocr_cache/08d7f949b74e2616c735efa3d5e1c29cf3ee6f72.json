@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2157.PNG",
+  "cache_key": "08d7f949b74e2616c735efa3d5e1c29cf3ee6f72",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 oo) LTE @ < Posts thestockalley thestockalley Long trades still green but short dated trades got cooked. Thats enough for me this week. September 24 &% thestockalley x HOOD {eo} 3 Oct10 Oct17 Oct24 Nov21 Dec19 Jan16,20 Buy Sell Call Put $170 Call $1.68 +) Breakeven To breakeven $171.60 +32.63% +28.00% Today Om Qu V2 n thestockalley Who has the heart to take this call with me ? September 24 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 6.969
+}

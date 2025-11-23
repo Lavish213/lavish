@@ -1,0 +1,41 @@
+# lavish_core/vision/trainer_feedback.py
+import os, csv, pickle, re
+from datetime import datetime, timezone
+
+CSV_IN  = "data/training_labels.csv"
+PKL_OUT = "data/vision_model.pkl"
+
+def load_rows(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"{path} not found. Run train_from_images.py first.")
+    with open(path, encoding="utf-8") as f:
+        r = csv.DictReader(f)
+        return list(r)
+
+def main():
+    rows = load_rows(CSV_IN)
+    word_w = {}
+    def bump(w, val):
+        w = w.lower()
+        word_w[w] = word_w.get(w, 0.0) + val
+
+    for r in rows:
+        text = (r.get("ocr_text") or "")
+        label = (r.get("label") or r.get("action") or "").upper()
+        y = 0.0
+        if label in ("BUY","CALL"):  y = +1.0
+        elif label in ("SELL","PUT"): y = -1.0
+        for w in re.findall(r"[A-Za-z]{3,}", text):
+            bump(w, y)
+
+    # normalize
+    for k in list(word_w.keys()):
+        word_w[k] = round(word_w[k]/5.0, 4)
+
+    model = {"word_weights": word_w, "updated_at": datetime.now(timezone.utc).isoformat()}
+    with open(PKL_OUT, "wb") as f:
+        pickle.dump(model, f)
+    print(f"Updated {PKL_OUT} with {len(word_w)} word weights.")
+
+if __name__ == "__main__":
+    main()

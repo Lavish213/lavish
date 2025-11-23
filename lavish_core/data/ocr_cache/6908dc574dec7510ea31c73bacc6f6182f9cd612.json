@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2208.PNG",
+  "cache_key": "6908dc574dec7510ea31c73bacc6f6182f9cd612",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © _) < Posts thestockalley thestockalley Back in August | said to buy the dip on the Robinhood trade and hold ¢} ¢ September 9 Gs, = thestockalley CRWV CoreWeave $106.32 © A $6.66 (7.12%) Today A $6.11 (6.10%) After-hours SPY SPDR S&P 500 ETF $651.73 © A $1.50 (0.23%) Today A $1.40 (0.22%) After-hours Oz Q2 V2 n thestockalley Both looking good after hours ... September 9 Gs, = thestockalley @ @Q 6",
+  "parsed": {},
+  "duration_sec": 2.745
+}

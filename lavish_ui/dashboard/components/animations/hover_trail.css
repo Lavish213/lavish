@@ -1,0 +1,34 @@
+/* dashboard/components/animations/hover_trail.css */
+
+.hover-trail {
+  position: relative;
+  transition:
+    transform var(--lavish-transition-fast),
+    box-shadow var(--lavish-transition-fast),
+    border-color var(--lavish-transition-fast),
+    background var(--lavish-transition-fast);
+}
+
+.hover-trail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(244, 193, 93, 0.35),
+    transparent 60%
+  );
+  transition: opacity 0.22s ease-out;
+}
+
+.hover-trail:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--lavish-shadow-gold);
+}
+
+.hover-trail:hover::after {
+  opacity: 1;
+}

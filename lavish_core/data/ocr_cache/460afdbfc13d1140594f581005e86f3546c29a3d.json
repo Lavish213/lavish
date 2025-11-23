@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2135.PNG",
+  "cache_key": "460afdbfc13d1140594f581005e86f3546c29a3d",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © < Posts thestockalley © 308 Qh22 W5 WN thestockalley The movie that help changed my life forever ... You better know this movie if you call yourself a stock trader. September 29 &% thestockalley Trade for earnings Just now Risky trade option Ou Vs n thestockalley | have a trade option for earnings today. It's about $1.75 a contract. | don’t have any inside information for earnings, so it’s 50/50. Link in bio September 29 &% thestockalley HOOD 1/2 ) a Q G) S",
+  "parsed": {},
+  "duration_sec": 6.764
+}

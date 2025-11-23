@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2192.PNG",
+  "cache_key": "57c02752a2aabbd21fab3a888d86559d8c50797e",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © < Posts thestockalley long term option, so In my opinion It’s cneap giving tne amount of time on the contract... more September 15 &% thestockalley TSLA Tesla $394.48 © A $25.66 (6.96%) Today 24 Hour Market O127 Q7 V8 W thestockalley Shoutout to the six individuals who purchased the Tesla trade. $4.40 > $23.10 HAA September 12 &% thestockalley @ 6",
+  "parsed": {},
+  "duration_sec": 6.948
+}

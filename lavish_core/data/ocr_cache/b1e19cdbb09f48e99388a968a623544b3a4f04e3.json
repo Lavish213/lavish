@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2085 2.PNG",
+  "cache_key": "b1e19cdbb09f48e99388a968a623544b3a4f04e3",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:39 ot) 5G+ < Posts thestockalley O28 72 W thestockalley Very cheap trade available. If this hits we are done for the week. Link in bio 2 days ago @& thestockalley * $439.23 | 22.4C O2Q1V7 W thestockalley Swing trade hits! 2 days ago @& thestockalley",
+  "parsed": {},
+  "duration_sec": 6.642
+}

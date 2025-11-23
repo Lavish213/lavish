@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2128.PNG",
+  "cache_key": "c1dad72be2be8392d546d937be9da737b153ee6d",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:41 al 5G © ) < Posts thestockalley The Stock Alley Home Posts Shop App Call (risky) Just now O27Q V W thestockalley App trade available. Link in bio. September 30 &% thestockalley 4 > @ oO o ie) x 2 2 Il Cheap trade Just now 97 Q3V7 W thestockalley Cheap trade available with tight stop loss. Link in bio September 30 &% thestockalley M@ Q 6",
+  "parsed": {},
+  "duration_sec": 7.314
+}

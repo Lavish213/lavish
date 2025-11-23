@@ -1,0 +1,59 @@
+# ------------------------
+# LAVISH BOT REQUIREMENTS
+# Wall Street Build
+# ------------------------
+
+# Core async + API
+aiohttp
+fastapi
+uvicorn
+starlette
+flask
+python-dotenv
+requests
+watchdog
+python-multipart
+uvloop
+
+# Data + ML
+pandas
+numpy
+scikit-learn
+rapidfuzz
+
+# Finance + Market APIs
+yfinance
+alpaca-trade-api
+alpaca-py
+finnhub-python
+
+# Vision + OCR
+pillow
+opencv-python
+pytesseract
+easyocr
+paddleocr
+
+# Deep Learning + Transformers
+torch
+torchvision
+transformers
+accelerate
+safetensors
+sentence-transformers
+sentencepiece
+
+# LLM + Knowledge / Agents
+openai
+langchain
+chromadb
+llama-index
+faiss-cpu
+
+# Communication + Integration
+discord.py
+vaderSentiment==3.3.2
+feedparser==6.0.11
+
+# Scraping / News
+newspaper3k

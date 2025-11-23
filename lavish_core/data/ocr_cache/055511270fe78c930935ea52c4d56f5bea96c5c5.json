@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2093.PNG",
+  "cache_key": "055511270fe78c930935ea52c4d56f5bea96c5c5",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:40 ot) 5G+ ©) < Posts thestockalley Gs, = thestockalley AppLovin $683.00 ® A $0.24 (0.04%) Pre-market 24 Hour Market Os 71 W thestockalley App trade available. Link in bio. 3 days ago @ @Q 6",
+  "parsed": {},
+  "duration_sec": 2.655
+}

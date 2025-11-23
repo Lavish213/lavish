@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2154 2.PNG",
+  "cache_key": "bc581c19721acb901bc5d7ba5920101f254ebea9",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 ob LTE © < Posts thestockalley LIICSLUCKAHey VVOW . OWINIYS YUL COUUKEU VUL IddSt LIdUe UI LIE week said watch this .. & & & & & September 24 * $1,758.46 | 17.64% O2 Qi V1 thestockalley Last trade of the week already up. ¢) ¢) & September 24 W @ @Q GH s",
+  "parsed": {},
+  "duration_sec": 7.028
+}

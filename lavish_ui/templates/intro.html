@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lavish | Intro</title>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/lavish_ui/assets/icons/lavish.ico" type="image/x-icon">
+
+    <!-- Global Styles -->
+    <link rel="stylesheet" href="/lavish_ui/shared/base.css">
+    <link rel="stylesheet" href="/lavish_ui/shared/fonts.css">
+
+    <!-- Page-Specific Styles -->
+    <link rel="stylesheet" href="/lavish_ui/intro/intro.css">
+
+    <!-- No-cache (ensures live refresh in dev) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <style>
+        body {
+            background: #0d0d0d;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .lavish-title {
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #00ffb3;
+            text-align: center;
+            margin-bottom: 0.3em;
+        }
+
+        .lavish-subtitle {
+            font-size: 1.2rem;
+            color: #cfcfcf;
+            text-align: center;
+            margin-bottom: 2em;
+        }
+
+        .lavish-btn {
+            background: linear-gradient(90deg, #00ffb3, #007bff);
+            border: none;
+            color: black;
+            padding: 0.9em 2em;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: transform 0.2s ease, background 0.3s ease;
+        }
+
+        .lavish-btn:hover {
+            transform: scale(1.05);
+            background: linear-gradient(90deg, #00ffaa, #00ccff);
+        }
+
+        #debug-info {
+            margin-top: 2rem;
+            font-size: 0.9rem;
+            color: #808080;
+            text-align: center;
+        }
+
+        #status-indicator {
+            margin-top: 1rem;
+            width: 220px;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #ff3c00, #ffe600, #00ff9d);
+            position: relative;
+        }
+
+        #status-dot {
+            position: absolute;
+            top: -4px;
+            left: 48%;
+            width: 18px;
+            height: 18px;
+            background-color: #fff;
+            border-radius: 50%;
+            border: 2px solid #111;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="intro-container">
+        <section id="welcome">
+            <h1 class="lavish-title">Welcome to Lavish</h1>
+            <p class="lavish-subtitle">Your intelligent trading companion</p>
+        </section>
+
+        <section id="launch">
+            <form action="/dashboard" method="get">
+                <button type="submit" class="lavish-btn">Enter Dashboard</button>
+            </form>
+        </section>
+
+        <section id="system-status">
+            <div id="status-indicator">
+                <div id="status-dot"></div>
+            </div>
+            <p style="margin-top: 1rem;">Status: <span id="status-text">Neutral</span></p>
+        </section>
+
+        <section id="debug-info">
+            <p>✅ Templates loaded</p>
+            <p>✅ UI assets linked</p>
+            <p>🧠 Cache disabled for development</p>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/lavish_ui/intro/intro.js" defer></script>
+
+</body>
+</html>

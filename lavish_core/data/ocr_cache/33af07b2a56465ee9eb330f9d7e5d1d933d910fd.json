@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2076.PNG",
+  "cache_key": "33af07b2a56465ee9eb330f9d7e5d1d933d910fd",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:38 a) 5G+ @ ) < Posts thestockalley @& thestockalley Can you tell me if we're talking on - discord???? 9:59 AM No | don’t use it anymore ) Message... oO WY ® | The I'm VAT TT Xs it 1 O23 Q VW W thestockalley | haven't used discord in months. | got tired of the copycats and scammers messaging my followers for money. 13 hours ago @& thestockalley AMD AanRgRaAar~X ay Q G) o",
+  "parsed": {},
+  "duration_sec": 4.377
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2166.PNG",
+  "cache_key": "390d99d767c2b2bad9b5e66004e29478407b28cd",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 ob LTE © < Posts thestockalley thestockalley Powell speaks today so no new trades today ... we just ride what we have already. September 23 &% thestockalley < ZZ & @ Robinhood Markets $126.94 © A $2.05 (1.64%) Today 24 Hour Market O\"7Q V4 W thestockalley The Robinhood trade that | posted in August comes all the way back and goes green. & September 23 &% thestockalley @ 6",
+  "parsed": {},
+  "duration_sec": 7.087
+}

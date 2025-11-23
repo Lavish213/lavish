@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2197.PNG",
+  "cache_key": "009d30d7229e5fed683e56c816c127d15491e589",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © < Posts thestockalley @& thestockalley TSLA Tesla $361.90 © A $14.11 (4.06%) Today 24 Hour Market Ox%Q V W thestockalley Spy and tesla trades are up much more today. Take profits on spy today. September 11 @ a o",
+  "parsed": {},
+  "duration_sec": 8.656
+}

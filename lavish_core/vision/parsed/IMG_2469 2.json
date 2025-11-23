@@ -1,0 +1,12 @@
+{
+  "file": "IMG_2469 2.PNG",
+  "hash": "5f68ebd5e3e301a0d5315b3d3c933f776b1a6a4b",
+  "text_excerpt": "< Posts\nthestockalley\n\n&% thestockalley\n\nTSLA\n\nTesla\n$345.84 ©\n\nA $23.68 (7.35%) Today\n24 Hour Market =\n\nthestockalley Out up $40k\nJune 23\n\n",
+  "intent": {
+    "symbols": [],
+    "action": "BUY",
+    "confidence": 0.65,
+    "ref_price": 345.84
+  },
+  "created_at": "2025-11-02T12:47:15.517395Z"
+}

@@ -1,0 +1,5 @@
+def ingest(self, dataset):
+    """Store and vectorize new data."""
+    from lavish_core.vector_index import update_vectors
+    update_vectors(dataset)
+    print(f"🧠 Brain updated with {len(dataset)} fresh entries.")

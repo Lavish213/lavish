@@ -1,0 +1,9 @@
+{
+  "collector": "Finnhub",
+  "sentiment": "negative",
+  "items": [
+    {
+      "headline": "No API key set for Finnhub."
+    }
+  ]
+}

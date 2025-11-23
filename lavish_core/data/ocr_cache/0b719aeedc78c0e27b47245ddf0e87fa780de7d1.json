@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2224.PNG",
+  "cache_key": "0b719aeedc78c0e27b47245ddf0e87fa780de7d1",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:46 ob LTE @ < Posts thestockalley On QV A thestockalley Take profits !¢) @ September 4 Gs. = thestockalley QQQ Invesco QQQ $573.30 © A $3.23 (0.57%) Today SPDR S&P 500 | $647.22 © A _ 48 on a Today as 29 Or 9 W thestockalley Still running & & & & September 4 Gs. = thestockalley @ @Q 6H",
+  "parsed": {},
+  "duration_sec": 5.415
+}

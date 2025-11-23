@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2147.PNG",
+  "cache_key": "4363866c7b6d416b000eab12bceb57a07601d634",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley Don’t swing an option when you’re already in the green, always sell it. Don’t watch your option go from green to red. Always take profits when you're up | don’t care if it’s only 20%. 168 C)13 Yo WN thestockalley Hard lessons | had to learn myself. September 26 ge thestockalley",
+  "parsed": {},
+  "duration_sec": 7.037
+}

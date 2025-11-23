@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2138.PNG",
+  "cache_key": "fd267a7d780b8c01a36406b723054b25923cf47b",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "Posts thestockalley se) thestockalley 12” $%.. The Stock Alley = Home Posts Shop Cheap but risky Swing trade available 18 minutes ago O17 V1 WN thestockalley The option cost between $1.89-$2.37 per contract. Link in bio Comments are off. Review controls. 3 days ago 4 V7 W thestockalley Added a new trade on this post for free. It’s a different stock | believe will climb soon. Comments are off. Review controls. 1 hour ago Ov Q1 V1 W thestockalley Free trade that was added already printing... September 29 &% thestockalley ay",
+  "parsed": {},
+  "duration_sec": 2.735
+}

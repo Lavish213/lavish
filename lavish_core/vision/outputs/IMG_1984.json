@@ -1,0 +1,3 @@
+{
+  "raw_summary": "```json\n{\n  \"symbols\": [\"META\", \"INTC\"],\n  \"actions\": [\"sell\", \"buy\"],\n  \"targets\": [\"85%\", \"$35.91\"],\n  \"stops\": [\"stop loss\"],\n  \"timeframe\": \"until December\",\n  \"notes\": \"Meta trade went up as far as 80%. Whales are loading up on Intel. News may be dropping soon. Intel is partnering with AMD.\"\n}\n```"
+}

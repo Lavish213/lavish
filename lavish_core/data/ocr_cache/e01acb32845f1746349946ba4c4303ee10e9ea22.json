@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2146.PNG",
+  "cache_key": "e01acb32845f1746349946ba4c4303ee10e9ea22",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © ) < Posts thestockalley gt thestockalley AppLovin $659.56 © A $19.65 (3.07%) Today 24 Hour Market O#2 QV: A thestockalley Absolute banger # Uy dy dy & September 26 Gs, = thestockalley @ Q eo",
+  "parsed": {},
+  "duration_sec": 2.163
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2164.PNG",
+  "cache_key": "05a77980aee12c9f488c22c0c59fb7e45737a9cd",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:43 al LTE @ ) < Posts thestockalley Gs, = thestockalley JD @ADR JD.com $34.06 © A $0.13 (0.38%) Today 24 Hour Market Ow V7 W thestockalley I've updated this trade with a new position. Head to Patreon. September 23 @ @Q 6",
+  "parsed": {},
+  "duration_sec": 6.663
+}

@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2136.PNG",
+  "cache_key": "bbf4e74267466b8dd78aa2fa430239ff924a91e8",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © < Posts thestockalley &% thestockalley HOOD Robinhood Markets $131.8. © A $10.06 (8.26%) Today 24 Hour Market O81 Qe We W thestockalley Free trade green September 29 &% thestockalley",
+  "parsed": {},
+  "duration_sec": 1.988
+}

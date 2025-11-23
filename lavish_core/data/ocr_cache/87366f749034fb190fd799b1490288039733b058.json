@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2179 2.PNG",
+  "cache_key": "87366f749034fb190fd799b1490288039733b058",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:44 ool LTE © ) < Posts thestockalley WOR. UIESLUCKalley The Stock Alley Home Posts Shop Whale drops $200k on this cheap option for October Just now Os V4 WN thestockalley Link in bio. September 18 Gs. ~=thestockalley",
+  "parsed": {},
+  "duration_sec": 7.466
+}

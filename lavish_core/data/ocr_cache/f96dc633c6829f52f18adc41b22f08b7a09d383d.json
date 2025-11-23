@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2141.PNG",
+  "cache_key": "f96dc633c6829f52f18adc41b22f08b7a09d383d",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:42 ool LTE © ) < Posts thestockalley AppLovin $713.30 © A $43.44 (6.49%) Today 24 Hour Market 92 Q3 73 W thestockalley Going crazy # ¥ # ¥ September 29 Gs, = thestockalley @ @Q 6H",
+  "parsed": {},
+  "duration_sec": 6.557
+}

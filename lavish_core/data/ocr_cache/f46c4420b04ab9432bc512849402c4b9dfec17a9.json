@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2119.PNG",
+  "cache_key": "f46c4420b04ab9432bc512849402c4b9dfec17a9",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "< Posts thestockalley &% thestockalley Do not hold a short dated trade overnight if you are green before the close. Yesterday APP trade was up 20% before the close, when the market opened it was red. Don’t let greed take you out. O22 Q5 7 thestockalley If you want to survive, listen! October 1 @v& thestockalley",
+  "parsed": {},
+  "duration_sec": 7.26
+}

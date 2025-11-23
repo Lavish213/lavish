@@ -1,0 +1,13 @@
+{
+  "image_path": "/Users/angelowashington/Lavish_bot/lavish_core/data/images_in/IMG_2217.PNG",
+  "cache_key": "10dacbce20fb51ad809a4a404aee9bf8f2f2cada",
+  "preproc": [
+    "gray",
+    "denoise",
+    "athr",
+    "deskew:-90.0deg"
+  ],
+  "ocr_text": "10:45 ool LTE © _) < Posts thestockalley Gs. = thestockalley Robinhood Markets $109.55 © V $1.66 (1.61%) Today A $8.30 (8.20%) After-hours Gg w im 3s yo vw 5 { Advanced | Ous Q2 W122 W thestockalley The last hope for the Hood option. It was aan just now that HOOD is joining the S&P 500. ¢ & September 5 @ @Q 6",
+  "parsed": {},
+  "duration_sec": 7.22
+}
