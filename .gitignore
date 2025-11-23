@@ -20,3 +20,27 @@ vision extras/
 *.h5
 *.pt
 *.onnx
+# ENV / Keys
+.env
+.env*
+*.key
+*.pem
+*.cert
+
+# Model Files
+*.pt
+*.onnx
+*.h5
+
+# Logs
+log/
+*.log
+
+# Cache
+__pycache__/
+memory/
+vision extras/
+
+# Images
+*.jpg
+*.jpeg
