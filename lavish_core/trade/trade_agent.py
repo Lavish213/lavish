@@ -255,6 +255,8 @@ def place_trade(
     tif: str = DEFAULT_TIF,
     client_id: Optional[str] = None,
     meta: Optional[Dict[str, Any]] = None,
+    take_profit: Optional[float] = None,
+    stop_loss: Optional[float] = None,
 ) -> Dict[str, Any]:
     symbol = symbol.upper().strip()
     side = side.lower().strip()
@@ -286,6 +288,10 @@ def place_trade(
     real_quote = _soft_quote(symbol)
     if real_quote:
         ref_price = real_quote
+
+    if take_profit is not None or stop_loss is not None:
+        meta.setdefault("take_profit", take_profit)
+        meta.setdefault("stop_loss", stop_loss)
 
     limits = load_risk_limits(store)
     acct_equity = None
@@ -421,9 +427,11 @@ def place_trade(
                 symbol=symbol,
                 side=side,
                 qty=qty,
-                order_type=order_type,
-                tif=tif,
+                type_=order_type,
+                time_in_force=tif,
                 limit_price=limit_price,
+                take_profit=take_profit,
+                stop_loss=stop_loss,
                 client_order_id=client_id or None,
             )
 

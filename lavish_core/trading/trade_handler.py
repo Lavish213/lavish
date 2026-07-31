@@ -13,6 +13,11 @@ log = get_logger("trade", log_dir="logs")
 CONF_FLOOR = float(os.getenv("SIGNAL_CONFIDENCE_FLOOR", "0.55"))
 TRADE_MODE = os.getenv("TRADE_MODE", "dry").lower()  # dry | paper | live
 
+# Bracket protection for new long entries. Without this, a submitted order
+# had no exit plan at all - a losing position just sat there indefinitely.
+STOP_LOSS_PCT = float(os.getenv("DEFAULT_STOP_LOSS_PCT", "0.015"))
+TAKE_PROFIT_PCT = float(os.getenv("DEFAULT_TAKE_PROFIT_PCT", "0.02"))
+
 def _coerce_side(action: str) -> Optional[str]:
     a = (action or "").strip().lower()
     if a in ("buy", "long"): return "buy"
@@ -54,8 +59,15 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
 
     meta = {"source": signal.get("source", "patreon"), "confidence": conf, "note": note}
 
-    log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f)",
-             side.upper(), sym, qty, conf, TRADE_MODE, ref_price)
+    # Only bracket new long entries. A "sell" here is closing/shorting, not
+    # opening a position, so there's nothing to attach a bracket exit to.
+    take_profit = stop_loss = None
+    if side == "buy" and ref_price > 0:
+        take_profit = round(ref_price * (1 + TAKE_PROFIT_PCT), 2)
+        stop_loss = round(ref_price * (1 - STOP_LOSS_PCT), 2)
+
+    log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f, tp=%s, sl=%s)",
+             side.upper(), sym, qty, conf, TRADE_MODE, ref_price, take_profit, stop_loss)
 
     out = place_trade(
         store=store,
@@ -68,6 +80,8 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
         tif="day",
         client_id=None,
         meta=meta,
+        take_profit=take_profit,
+        stop_loss=stop_loss,
     )
     log.info("Trade result: %s", out)
 

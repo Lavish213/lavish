@@ -89,6 +89,7 @@ def latest_quote(symbol: str) -> Optional[float]:
 
 def place_order(symbol: str, side: str, qty: str,
                 type_: str = "market", time_in_force: str = "day",
+                limit_price: Optional[float] = None,
                 take_profit: Optional[float] = None,
                 stop_loss: Optional[float] = None,
                 client_order_id: Optional[str] = None) -> Dict[str, Any]:
@@ -105,6 +106,8 @@ def place_order(symbol: str, side: str, qty: str,
         "type": type_,
         "time_in_force": time_in_force
     }
+    if type_ in ("limit", "stop_limit") and limit_price is not None:
+        payload["limit_price"] = str(limit_price)
     if take_profit is not None or stop_loss is not None:
         payload["order_class"] = "bracket"
         if take_profit is not None:
