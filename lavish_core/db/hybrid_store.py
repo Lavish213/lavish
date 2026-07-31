@@ -422,7 +422,7 @@ class HybridStore:
                     "tif": r[7],
                     "venue": r[8],
                     "status": r[9],
-                    ***REMOVED***: r[10],
+                    "client_id": r[10],
                     "meta": json.loads(r[11] or "{}"),
                 }
             )

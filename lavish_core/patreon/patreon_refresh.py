@@ -12,17 +12,17 @@ PATREON_TOKEN_URL = "https://www.patreon.com/api/oauth2/token"
 
 def refresh_patreon_token():
     client_id = os.getenv("PATREON_CLIENT_ID")
-    ***REMOVED*** = os.getenv("PATREON_CLIENT_SECRET")
+    client_secret = os.getenv("PATREON_CLIENT_SECRET")
     refresh_token = os.getenv("PATREON_REFRESH_TOKEN")
-    if not all([client_id, ***REMOVED***, refresh_token]):
+    if not all([client_id, client_secret, refresh_token]):
         log.warning("⚠️ Missing Patreon credentials in env.")
         return None
 
     payload = {
         "grant_type": "refresh_token",
         "refresh_token": refresh_token,
-        ***REMOVED***: client_id,
-        "***REMOVED***": ***REMOVED***,
+        "client_id": client_id,
+        "client_secret": client_secret,
     }
 
     try:

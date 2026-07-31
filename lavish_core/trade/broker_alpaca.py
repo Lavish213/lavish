@@ -8,9 +8,11 @@ log = logging.getLogger("broker_alpaca")
 API_KEY = os.getenv("ALPACA_API_KEY", "")
 API_SECRET = os.getenv("ALPACA_SECRET_KEY", "")
 BASE_URL_RAW = os.getenv("ALPACA_BASE_URL", "https://paper-api.alpaca.markets")
+DATA_URL_RAW = os.getenv("ALPACA_DATA_URL", "https://data.alpaca.markets")
 
 # Normalize BASE_URL (allow user to put with or without /v2)
 BASE_URL = BASE_URL_RAW.rstrip("/")
+DATA_URL = DATA_URL_RAW.rstrip("/")
 ORDERS_URL = f"{BASE_URL}/v2/orders"
 ACCOUNT_URL = f"{BASE_URL}/v2/account"
 POS_URL = f"{BASE_URL}/v2/positions"
@@ -41,7 +43,51 @@ def get_position(symbol: str) -> Optional[Dict[str, Any]]:
         raise RuntimeError(f"Alpaca position error {r.status_code}: {r.text}")
     return r.json()
 
-def place_order(symbol: str, side: str, qty: str, 
+def get_order(order_id: str) -> Dict[str, Any]:
+    _check_keys()
+    r = requests.get(f"{ORDERS_URL}/{order_id}", headers=HEADERS, timeout=15)
+    if r.status_code != 200:
+        raise RuntimeError(f"Alpaca get_order error {r.status_code}: {r.text}")
+    return r.json()
+
+def latest_quote(symbol: str) -> Optional[float]:
+    """
+    Real last-trade price from Alpaca's market data API, with a quote-midpoint
+    fallback. Returns None (never raises) so callers can soft-fail to other
+    pricing when the market is closed or the symbol has no recent data.
+    """
+    _check_keys()
+    symbol = symbol.upper()
+    try:
+        r = requests.get(
+            f"{DATA_URL}/v2/stocks/{symbol}/trades/latest",
+            headers=HEADERS, timeout=10,
+        )
+        if r.status_code == 200:
+            p = r.json().get("trade", {}).get("p")
+            if p:
+                return float(p)
+    except Exception as e:
+        log.warning(f"latest_quote trade lookup failed for {symbol}: {e}")
+
+    try:
+        r = requests.get(
+            f"{DATA_URL}/v2/stocks/{symbol}/quotes/latest",
+            headers=HEADERS, timeout=10,
+        )
+        if r.status_code == 200:
+            q = r.json().get("quote", {})
+            ap, bp = q.get("ap"), q.get("bp")
+            if ap and bp:
+                return float((ap + bp) / 2)
+            if ap or bp:
+                return float(ap or bp)
+    except Exception as e:
+        log.warning(f"latest_quote quote lookup failed for {symbol}: {e}")
+
+    return None
+
+def place_order(symbol: str, side: str, qty: str,
                 type_: str = "market", time_in_force: str = "day",
                 take_profit: Optional[float] = None,
                 stop_loss: Optional[float] = None,

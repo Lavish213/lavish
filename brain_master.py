@@ -210,7 +210,7 @@ def newsapi_fetch(tickers: List[str]) -> List[Dict]:
                     "source": a.get("source", {}).get("name") or "",
                     "url": a.get("url") or "",
                     "title": a.get("title") or "",
-                    "published_at": a.get("publishedAt") or dt.datetime.now(timezone.utc).isoformat(),
+                    "published_at": a.get("publishedAt") or dt.datetime.now(dt.timezone.utc).isoformat(),
                     "text": (a.get("description") or "") + "\n" + (a.get("content") or ""),
                 })
         except Exception:
@@ -229,7 +229,7 @@ def rss_fetch(urls: List[str]) -> List[Dict]:
                     "source": e.get("link", "").split("/")[2] if e.get("link") else (d.feed.get("title") or "rss"),
                     "url": e.get("link") or "",
                     "title": e.get("title") or "",
-                    "published_at": e.get("published", dt.datetime.now(timezone.utc).isoformat()),
+                    "published_at": e.get("published", dt.datetime.now(dt.timezone.utc).isoformat()),
                     "text": e.get("summary", ""),
                 })
         except Exception:
@@ -289,7 +289,7 @@ def upsert_videos(video_ids: List[str]):
             # we don't fetch meta via API here; let title/channel be placeholders
             title = f"YT:{vid}"
             channel = "unknown"
-            published_at = dt.datetime.now(timezone.utc).isoformat()
+            published_at = dt.datetime.now(dt.timezone.utc).isoformat()
             tix = extract_tickers(tx)
             s = sent(tx)
             tr = 0.7  # default trust for curated watchlist
@@ -381,7 +381,7 @@ def composite_score(signal: dict, cx: Dict) -> float:
     src_trust = 0.8 if "patreon" in src else 0.7 if "vision" in src else 0.6
 
     # recency of signal timestamp
-    ts = signal.get("metadata", {}).get("ts") or signal.get("ts") or dt.datetime.now(timezone.utc).isoformat()
+    ts = signal.get("metadata", {}).get("ts") or signal.get("ts") or dt.datetime.now(dt.timezone.utc).isoformat()
     r = recency_weight(ts, half_life_h=2.0)  # signals decay faster
 
     # blend
@@ -411,7 +411,7 @@ def enrich_signals():
                 "source": s.get("source") or s.get("reason") or "unknown",
                 "context": cx,
                 "metadata": s.get("metadata", s),
-                "ts": dt.datetime.now(timezone.utc).isoformat()
+                "ts": dt.datetime.now(dt.timezone.utc).isoformat()
             }
             # persist to DB (signals table) + JSONL for trader
             con.execute("""

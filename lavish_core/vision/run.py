@@ -131,8 +131,8 @@ def _patreon_self_heal_once() -> None:
             payload = {
                 "grant_type": "refresh_token",
                 "refresh_token": PATREON_REFRESH_TOKEN,
-                ***REMOVED***: PATREON_CLIENT_ID,
-                "***REMOVED***": PATREON_CLIENT_SECRET,
+                "client_id": PATREON_CLIENT_ID,
+                "client_secret": PATREON_CLIENT_SECRET,
             }
             r = requests.post(url, data=payload, timeout=30)
             r.raise_for_status()

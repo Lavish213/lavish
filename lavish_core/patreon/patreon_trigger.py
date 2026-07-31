@@ -26,6 +26,17 @@ VISION_AUTO  = os.getenv("VISION_AUTO", "true").strip().lower() in ("1","true","
 SYM_RE = re.compile(r"\b([A-Z]{1,5})\b")
 BAD = {"THE","AND","WITH","THIS","THAT","BUY","SELL","CALLS","PUTS"}
 
+# Only tokens on this list are treated as tickers. Without it, any shouted
+# all-caps word in a post ("PRINT", "BIG", "TODAY", ...) gets traded as a symbol.
+WHITELIST_TICKERS = {
+    s.strip().upper()
+    for s in os.getenv(
+        "WHITELIST_TICKERS",
+        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR",
+    ).split(",")
+    if s.strip()
+}
+
 def _headers(tok: Optional[str]=None) -> Dict[str, str]:
     return {"Authorization": f"Bearer {tok or ACCESS}"}
 
@@ -52,7 +63,7 @@ def _ensure_campaign_id() -> str:
 
 def _parse_symbols(text: str) -> List[str]:
     c = {m.group(1).upper() for m in SYM_RE.finditer(text or "")}
-    return [x for x in c if x not in BAD][:5]
+    return [x for x in c if x not in BAD and x in WHITELIST_TICKERS][:5]
 
 def _download_images_from_post(post: Dict[str, Any]) -> List[Path]:
     saved: List[Path] = []

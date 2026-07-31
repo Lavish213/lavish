@@ -5,7 +5,8 @@ from typing import Dict, Any, Optional
 
 from lavish_core.logger_setup import get_logger
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
-from lavish_core.trade.trade_agent import place_trade, _dry_price  # reuse pricing logic
+from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fallback pricing only
+from lavish_core.trade.broker_alpaca import latest_quote
 
 log = get_logger("trade", log_dir="logs")
 
@@ -41,7 +42,13 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
     store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
 
     # Size: if amount_usd provided → qty = amount / ref_price; else default $500 block
-    ref_price = _dry_price(sym)
+    # Use a real market quote when we have broker creds; a hash-based dummy
+    # price would size real orders against a number unrelated to the market.
+    try:
+        ref_price = latest_quote(sym) or _dry_price(sym)
+    except Exception as e:
+        log.warning("latest_quote failed for %s, falling back to dry price: %s", sym, e)
+        ref_price = _dry_price(sym)
     dollars = float(amt) if amt is not None else float(os.getenv("DEFAULT_TRADE_DOLLARS", "500"))
     qty = max(1.0, round(dollars / max(0.01, ref_price), 0))
 

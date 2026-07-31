@@ -47,8 +47,7 @@ try:
         get_account,
         get_position as broker_position,
         place_order as broker_place_order,
-        # NOTE: if you later add a quote getter in broker_alpaca,
-        # we will auto-detect and use it.
+        get_order as broker_get_order,
     )
     HAS_ALPACA = True
 except Exception:
@@ -80,6 +79,9 @@ MAX_SANITY_PCT = float(env("ORDER_PRICE_SANITY_PCT_MAX", "0.02") or 0.02)
 
 RETRY_MAX = int(env("ORDER_RETRY_MAX", "4") or 4)
 RETRY_BASE = float(env("ORDER_RETRY_BASE_SEC", "0.75") or 0.75)
+
+FILL_POLL_ATTEMPTS = int(env("ORDER_FILL_POLL_ATTEMPTS", "5") or 5)
+FILL_POLL_INTERVAL_SEC = float(env("ORDER_FILL_POLL_INTERVAL_SEC", "1.0") or 1.0)
 
 def _dry_price(symbol: str, fallback: float = 100.0) -> float:
     """
@@ -430,6 +432,25 @@ def place_trade(
             broker_oid = broker_resp.get("id")
             client_ord_id = client_id or broker_resp.get("client_order_id")
 
+            # Market orders usually fill within a couple seconds; poll briefly
+            # so we record what actually happened instead of assuming "submitted".
+            final_status = broker_resp.get("status", "submitted")
+            filled_qty = broker_resp.get("filled_qty")
+            filled_avg_price = broker_resp.get("filled_avg_price")
+            if broker_oid:
+                for _ in range(FILL_POLL_ATTEMPTS):
+                    if final_status in ("filled", "canceled", "expired", "rejected"):
+                        break
+                    time.sleep(FILL_POLL_INTERVAL_SEC)
+                    try:
+                        polled = broker_get_order(broker_oid)
+                        final_status = polled.get("status", final_status)
+                        filled_qty = polled.get("filled_qty", filled_qty)
+                        filled_avg_price = polled.get("filled_avg_price", filled_avg_price)
+                    except Exception as e:
+                        LOG.warning("Order status poll failed for %s: %s", broker_oid, e)
+                        break
+
             oid = store.submit_order(
                 symbol=symbol,
                 side=side,
@@ -438,17 +459,29 @@ def place_trade(
                 limit_price=limit_price,
                 tif=tif,
                 venue=mode,
-                status="submitted",
+                status=final_status,
                 client_id=client_ord_id,
                 meta={"broker": "alpaca", "raw": broker_resp, **meta},
             )
-            LOG.info("%s SUBMITTED %s×%s (order=%s broker_id=%s client_id=%s)",
-                     mode.upper(), qty, symbol, oid, broker_oid, client_ord_id)
+            if final_status == "filled":
+                store.log_fill(
+                    order_id=oid,
+                    symbol=symbol,
+                    side=side,
+                    qty=float(filled_qty or qty),
+                    price=float(filled_avg_price or ref_price),
+                    fee=0.00,
+                    venue=mode,
+                )
+            LOG.info("%s %s %s×%s (order=%s broker_id=%s client_id=%s status=%s)",
+                     mode.upper(), final_status.upper(), qty, symbol, oid, broker_oid, client_ord_id, final_status)
             return {
-                "status": "submitted",
+                "status": final_status,
                 "order_id": oid,
                 "broker_id": broker_oid,
                 "client_order_id": client_ord_id,
+                "filled_qty": filled_qty,
+                "filled_avg_price": filled_avg_price,
             }
 
         except Exception as e:

@@ -138,6 +138,18 @@ TICKER_RE = re.compile(r"\b([A-Z]{1,5})(?:\b|[^a-zA-Z])")
 BUY_WORDS = ("BUY", "CALL", "LONG", "OPEN", "ENTRY")
 SELL_WORDS = ("SELL", "PUT", "SHORT", "EXIT", "CLOSE", "TRIM", "TAKE PROFIT")
 
+# Only OCR'd all-caps tokens that are on this list are treated as tickers.
+# Without it, any shouted word in a screenshot ("PRINT", "BIG", "TODAY", ...)
+# gets parsed as a tradeable symbol.
+TICKER_WHITELIST = {
+    s.strip().upper()
+    for s in os.getenv(
+        "WHITELIST_TICKERS",
+        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR",
+    ).split(",")
+    if s.strip()
+}
+
 @dataclass
 class Trigger:
     ticker: str
@@ -226,9 +238,9 @@ def _parse_triggers_from_text(text: str) -> List[Trigger]:
     side = "BUY" if any(w in up for w in BUY_WORDS) and not any(w in up for w in SELL_WORDS) else (
            "SELL" if any(w in up for w in SELL_WORDS) and not any(w in up for w in BUY_WORDS) else "BUY")
     tickers = {m.group(1) for m in TICKER_RE.finditer(up)}
-    # Filter common non-tickers
+    # Filter common non-tickers, then require membership in the known-symbol whitelist
     blacklist = {"USD","CEO","CFO","QQQ","ETF","FOMC","CPI"}
-    tickers = [t for t in tickers if 1<=len(t)<=5 and t not in blacklist]
+    tickers = [t for t in tickers if 1<=len(t)<=5 and t not in blacklist and t in TICKER_WHITELIST]
     conf = 0.70 if side=="BUY" else 0.68
     return [Trigger(ticker=t, side=side, confidence=conf, reason="ocr_trigger", raw_text=text, meta={})
             for t in tickers]

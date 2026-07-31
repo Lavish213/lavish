@@ -10,26 +10,26 @@ api = tradeapi.REST(
     os.getenv("ALPACA_BASE_URL")
 )
 
-
-
-
 account = api.get_account()
 print("Account Status:", account.status)
-# Example: Buy 1 share of AAPL in paper trading
-api.submit_order(
-    symbol="AAPL",
-    qty=1,
-    side="buy",
-    type="market",
-    time_in_force="gtc"
-)
-print("✅ Test trade submitted!")
-# ---- Test Trade ----
-order = api.submit_order(
-    symbol="AAPL",      # stock to trade
-    qty=1,              # number of shares
-    side="buy",         # buy or sell
-    type="market",      # market order
-    time_in_force="gtc" # good till canceled
-)
-print("✅ Test order sent:", order)
+print("Alpaca base URL:", os.getenv("ALPACA_BASE_URL"))
+
+# Submitting an order here is destructive (real paper/live order), so it only
+# runs when explicitly requested and never against a live (non-paper) account.
+if os.getenv("RUN_DEMO_ORDER", "0") == "1":
+    base_url = (os.getenv("ALPACA_BASE_URL") or "").lower()
+    if "paper-api" not in base_url:
+        raise SystemExit(
+            "Refusing to submit demo order: ALPACA_BASE_URL does not look like "
+            "a paper-trading endpoint. Set RUN_DEMO_ORDER=1 only against paper-api.alpaca.markets."
+        )
+    order = api.submit_order(
+        symbol="AAPL",
+        qty=1,
+        side="buy",
+        type="market",
+        time_in_force="gtc",
+    )
+    print("Demo order submitted:", order)
+else:
+    print("RUN_DEMO_ORDER not set to 1 — skipping demo order submission.")

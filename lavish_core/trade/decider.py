@@ -148,7 +148,14 @@ class TradeDecider:
         math_sig = parsed_payload.get("math_sig")  # may be None
 
         # ── 2) Run text predictor ──────────────────────────────
-        model_out = predict_text(text) if text else {"label": "UNKNOWN", "confidence": 0.0, "probs": {}}
+        if text:
+            try:
+                model_out = predict_text(text)
+            except Exception as e:
+                logger.warning(f"predict_text failed, falling back to UNKNOWN: {e}")
+                model_out = {"label": "UNKNOWN", "confidence": 0.0, "probs": {}}
+        else:
+            model_out = {"label": "UNKNOWN", "confidence": 0.0, "probs": {}}
         label = model_out.get("label", "UNKNOWN").upper()
         conf  = float(model_out.get("confidence", 0.0))
 
