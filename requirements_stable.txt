@@ -41,7 +41,8 @@ defusedxml==0.7.1
 Deprecated==1.2.18
 deprecation==2.1.0
 dirtyjson==1.0.8
-discord.py==2.6.4
+# discord.py-self, not discord.py - see requirements.txt for why
+discord.py-self
 distro==1.9.0
 duckdb==1.4.1
 durationpy==0.10

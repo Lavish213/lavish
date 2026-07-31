@@ -8,11 +8,12 @@ from pathlib import Path
 from datetime import datetime, timedelta, date
 from typing import Dict, Any, List, Tuple, Optional
 
-import cv2
-import numpy as np
-from PIL import Image
-import pytesseract
 from rapidfuzz import process, fuzz
+
+# cv2/PIL/pytesseract are only needed for the image-OCR path (ocr_image/
+# parse_image). Text-only alert parsing (parse_text/parse_alert with no
+# image) shouldn't require installing OpenCV + Tesseract just to read a
+# Discord message, so these are imported lazily inside ocr_image() instead.
 
 # Optional but nice
 try:
@@ -51,10 +52,29 @@ if TICKERS_CSV.exists():
     except Exception:
         pass
 
+# Fall back to the same env-configurable whitelist used by the Patreon/vision
+# parsers, so a signal source with no tickers.csv doesn't silently fall back
+# to "any all-caps word is a ticker" (the bug that produced garbage trades
+# before the whitelist was added elsewhere in the pipeline).
+if not KNOWN_TICKERS:
+    KNOWN_TICKERS = {
+        s.strip().upper()
+        for s in os.getenv(
+            "WHITELIST_TICKERS",
+            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR",
+        ).split(",")
+        if s.strip()
+    }
+
 # ---------- Utilities ----------
 
 def _clean_text(s: str) -> str:
     s = s.replace("\n", " ").replace("\r", " ")
+    # Strip thousands-separator commas ("$1,120" -> "$1120") before any of
+    # the numeric regexes run - otherwise a comma splits the digits and a
+    # strike like "$1,120 Call" gets misread as strike 120, resolving to a
+    # completely different (and real, tradable) contract.
+    s = re.sub(r"(?<=\d),(?=\d{3}\b)", "", s)
     s = re.sub(r"\s+", " ", s)
     return s.strip()
 
@@ -75,15 +95,39 @@ def _nearest_friday(d: date) -> date:
     delta = (4 - wd) % 7
     return d + timedelta(days=delta)
 
+def _parse_numeric_date(text: str, year: int) -> Optional[date]:
+    # e.g., "5/24", "5/31", "07/24/26" - the format actually used in her
+    # alerts ("SPY $528.00 Put 5/24"), as opposed to the month-name format
+    # ("May 31") the OCR trade-card screenshots tend to show.
+    m = re.search(r"\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b", text)
+    if not m:
+        return None
+    mm, dd = int(m.group(1)), int(m.group(2))
+    if not (1 <= mm <= 12 and 1 <= dd <= 31):
+        return None
+    yy = m.group(3)
+    if yy:
+        yy = int(yy)
+        y = yy + 2000 if yy < 100 else yy
+    else:
+        y = year
+    try:
+        d = date(y, mm, dd)
+        if yy is None and d < date.today():
+            d = date(year + 1, mm, dd)
+        return d
+    except Exception:
+        return None
+
 def _parse_month_day(text: str, year: int) -> Optional[date]:
     # e.g., "May 31", "Jun 7", "June 21"
     m = re.search(r"\b([A-Za-z]{3,9})\s+(\d{1,2})\b", text)
-    if not m: 
-        return None
+    if not m:
+        return _parse_numeric_date(text, year)
     mon = m.group(1).lower()
     day = int(m.group(2))
-    if mon not in MONTHS: 
-        return None
+    if mon not in MONTHS:
+        return _parse_numeric_date(text, year)
     mm = MONTHS[mon]
     try:
         d = date(year, mm, day)
@@ -195,7 +239,8 @@ def _extract(text: str, img_path: Path) -> Dict[str, Any]:
 
 # ---------- OCR Pipeline ----------
 
-def _preprocess_for_ocr(img_bgr: np.ndarray) -> np.ndarray:
+def _preprocess_for_ocr(img_bgr) -> "np.ndarray":
+    import cv2
     # 1) make a hi-contrast grayscale
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
     # 2) light denoise & sharpen
@@ -206,6 +251,9 @@ def _preprocess_for_ocr(img_bgr: np.ndarray) -> np.ndarray:
     return thr
 
 def ocr_image(img_path: Path) -> str:
+    import cv2
+    from PIL import Image
+    import pytesseract
     img = cv2.imread(str(img_path))
     if img is None:
         return ""
@@ -223,6 +271,34 @@ def ocr_image(img_path: Path) -> str:
 def parse_image(img_path: Path) -> Dict[str, Any]:
     text = ocr_image(img_path)
     return _extract(text, img_path)
+
+def parse_text(text: str, source: str = "text") -> Dict[str, Any]:
+    """
+    Same extraction as parse_image(), for alerts that arrive as plain text
+    (e.g. a Discord message body) with no attached trade-card screenshot.
+    """
+    return _extract(_clean_text(text or ""), Path(source))
+
+def parse_alert(text: str = "", img_path: Optional[Path] = None, source: str = "text") -> Dict[str, Any]:
+    """
+    Combine text + an optional trade-card screenshot into one signal: OCR
+    the image (if given) and merge it with whatever the message text itself
+    contains, preferring whichever side found a given field.
+    """
+    text_result = parse_text(text, source=source) if text else None
+    image_result = parse_image(img_path) if img_path else None
+
+    if text_result and image_result:
+        merged = dict(text_result)
+        for key in ("ticker", "side", "strike", "expiry", "entry_price_est", "target_hint", "stop_hint"):
+            if not merged.get(key) and image_result.get(key):
+                merged[key] = image_result[key]
+        merged["confidence"] = max(text_result.get("confidence", 0.0), image_result.get("confidence", 0.0))
+        merged["needs_human_review"] = merged["confidence"] < 0.75
+        merged["notes_excerpt"] = (text_result.get("notes_excerpt") or image_result.get("notes_excerpt"))
+        return merged
+
+    return text_result or image_result or _extract("", Path(source))
 
 def parse_folder(folder: Path) -> List[Dict[str, Any]]:
     results = []

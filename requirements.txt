@@ -51,7 +51,12 @@ llama-index
 faiss-cpu
 
 # Communication + Integration
-discord.py
+# discord.py-self, NOT discord.py: reading alerts out of someone else's
+# paid Discord server requires logging in as a user account (no bot gets
+# invited to that server), and discord.py-self is the fork that supports
+# that. The two packages share the same import name and cannot both be
+# installed - see lavish_core/discord_ingest/listener.py before enabling.
+discord.py-self
 vaderSentiment==3.3.2
 feedparser==6.0.11
 

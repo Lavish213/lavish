@@ -1,12 +1,15 @@
 # lavish_core/trading/trade_handler.py
 from __future__ import annotations
 import os
+from datetime import date, datetime
 from typing import Dict, Any, Optional
 
 from lavish_core.logger_setup import get_logger
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fallback pricing only
 from lavish_core.trade.broker_alpaca import latest_quote
+from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
+from lavish_core.trade.options_exit_monitor import watch_and_exit_async
 
 log = get_logger("trade", log_dir="logs")
 
@@ -18,6 +21,9 @@ TRADE_MODE = os.getenv("TRADE_MODE", "dry").lower()  # dry | paper | live
 STOP_LOSS_PCT = float(os.getenv("DEFAULT_STOP_LOSS_PCT", "0.015"))
 TAKE_PROFIT_PCT = float(os.getenv("DEFAULT_TAKE_PROFIT_PCT", "0.02"))
 
+DEFAULT_OPTION_TRADE_DOLLARS = float(os.getenv("DEFAULT_OPTION_TRADE_DOLLARS", "200"))
+OPTION_STRIKE_TOLERANCE = float(os.getenv("OPTION_STRIKE_TOLERANCE", "5"))
+
 def _coerce_side(action: str) -> Optional[str]:
     a = (action or "").strip().lower()
     if a in ("buy", "long"): return "buy"
@@ -25,6 +31,96 @@ def _coerce_side(action: str) -> Optional[str]:
     return None
 
 def execute_trade_from_post(signal: Dict[str, Any]) -> None:
+    """
+    Dispatches to the options or equity path based on the signal's shape.
+
+    Options signal (from extract_signal.parse_alert/parse_text):
+      { ticker, side('CALL'|'PUT'), strike, expiry('YYYY-MM-DD'),
+        confidence, target_hint(underlying), stop_hint(underlying),
+        amount_usd(optional), source, note }
+
+    Equity signal (from patreon_trigger.py etc):
+      { source, action('BUY'|'SELL'|etc), symbol, confidence(0..1),
+        amount_usd(optional), note(optional) }
+    """
+    if signal.get("strike") and signal.get("expiry") and str(signal.get("side", "")).upper() in ("CALL", "PUT"):
+        _execute_option_trade(signal)
+    else:
+        _execute_equity_trade(signal)
+
+def _execute_option_trade(signal: Dict[str, Any]) -> None:
+    ticker = str(signal.get("ticker") or signal.get("symbol") or "").upper().strip()
+    option_side = str(signal.get("side", "")).upper().strip()
+    strike = signal.get("strike")
+    expiry_raw = signal.get("expiry")
+    conf = float(signal.get("confidence", 0) or 0)
+    target_hint = signal.get("target_hint")
+    stop_hint = signal.get("stop_hint")
+    amt = signal.get("amount_usd")
+    note = signal.get("note", "")
+
+    if not ticker or not strike or not expiry_raw:
+        log.info("Skip options trade: missing ticker/strike/expiry in %s", signal)
+        return
+    if conf < CONF_FLOOR:
+        log.info("Skip options trade: confidence %.2f < floor %.2f (%s %s %s)",
+                  conf, CONF_FLOOR, ticker, option_side, strike)
+        return
+
+    try:
+        expiry = expiry_raw if isinstance(expiry_raw, date) else datetime.fromisoformat(str(expiry_raw)).date()
+    except Exception as e:
+        log.warning("Skip options trade: unparseable expiry %r: %s", expiry_raw, e)
+        return
+
+    contract = resolve_and_price_contract(
+        ticker, expiry, option_side, float(strike), strike_tolerance=OPTION_STRIKE_TOLERANCE,
+    )
+    if not contract:
+        log.warning("Skip options trade: no listed contract found near %s %s $%.2f exp %s",
+                     ticker, option_side, float(strike), expiry)
+        return
+
+    mid_price = contract.get("mid_price")
+    if not mid_price or mid_price <= 0:
+        log.warning("Skip options trade: no usable quote for %s", contract.get("symbol"))
+        return
+
+    dollars = float(amt) if amt is not None else DEFAULT_OPTION_TRADE_DOLLARS
+    qty = max(1, int(dollars // (mid_price * 100)))
+
+    log.info("🔔 options signal → %s %s $%.2f exp %s (contract=%s qty=%s mid=%.2f mode=%s target=%s stop=%s)",
+              option_side, ticker, float(strike), expiry, contract["symbol"], qty, mid_price,
+              TRADE_MODE, target_hint, stop_hint)
+
+    if TRADE_MODE not in ("paper", "live"):
+        log.info("dry mode: would BUY %s x%s @ ~%.2f (no order submitted)", contract["symbol"], qty, mid_price)
+        return
+
+    try:
+        order = place_option_order(
+            contract_symbol=contract["symbol"], side="buy", qty=qty,
+            order_type="limit", limit_price=mid_price,
+        )
+    except Exception as e:
+        log.error("Options order failed for %s: %s", contract["symbol"], e)
+        return
+
+    log.info("Options order result: %s", order)
+
+    if target_hint is not None or stop_hint is not None:
+        watch_and_exit_async(
+            underlying_symbol=ticker,
+            contract_symbol=contract["symbol"],
+            qty=qty,
+            option_side=option_side,
+            target_underlying=float(target_hint) if target_hint is not None else None,
+            stop_underlying=float(stop_hint) if stop_hint is not None else None,
+        )
+    else:
+        log.warning("No target/stop given for %s - position has no automated exit plan.", contract["symbol"])
+
+def _execute_equity_trade(signal: Dict[str, Any]) -> None:
     """
     Expected signal fields:
       { source, action('BUY'|'SELL'|etc), symbol, confidence(0..1),
