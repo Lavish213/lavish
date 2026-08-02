@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 from lavish_core.logger_setup import get_logger
-from lavish_core.trading.trade_handler import execute_trade_from_post
+from lavish_core.trading.alert_handler import handle_alert_text
 from lavish_core.patreon.patreon_refresh import refresh_patreon_token
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,20 +22,6 @@ ACCESS   = os.getenv("PATREON_ACCESS_TOKEN", "")
 CAMPAIGN = os.getenv("PATREON_CAMPAIGN_ID", "")
 POLL_SECONDS = int(os.getenv("PATREON_POLL_SECONDS", "20"))
 VISION_AUTO  = os.getenv("VISION_AUTO", "true").strip().lower() in ("1","true","yes","on")
-
-SYM_RE = re.compile(r"\b([A-Z]{1,5})\b")
-BAD = {"THE","AND","WITH","THIS","THAT","BUY","SELL","CALLS","PUTS"}
-
-# Only tokens on this list are treated as tickers. Without it, any shouted
-# all-caps word in a post ("PRINT", "BIG", "TODAY", ...) gets traded as a symbol.
-WHITELIST_TICKERS = {
-    s.strip().upper()
-    for s in os.getenv(
-        "WHITELIST_TICKERS",
-        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR",
-    ).split(",")
-    if s.strip()
-}
 
 def _headers(tok: Optional[str]=None) -> Dict[str, str]:
     return {"Authorization": f"Bearer {tok or ACCESS}"}
@@ -61,10 +47,6 @@ def _ensure_campaign_id() -> str:
             return CAMPAIGN
     raise RuntimeError("No Patreon campaign found on identity")
 
-def _parse_symbols(text: str) -> List[str]:
-    c = {m.group(1).upper() for m in SYM_RE.finditer(text or "")}
-    return [x for x in c if x not in BAD and x in WHITELIST_TICKERS][:5]
-
 def _download_images_from_post(post: Dict[str, Any]) -> List[Path]:
     saved: List[Path] = []
     attrs = post.get("attributes", {})
@@ -84,36 +66,32 @@ def _download_images_from_post(post: Dict[str, Any]) -> List[Path]:
             log.error("img_download_error: %s : %s", url, e)
     return saved
 
-def _action_and_conf(text: str) -> tuple[str, float]:
-    t = (text or "").lower()
-    if re.search(r"\b(sell|short)\b", t):
-        return ("SELL", 0.9)
-    if "buy" in t:
-        return ("BUY", 0.9)
-    return ("BUY", 0.65)
-
 def _handle_post(post: Dict[str, Any]) -> None:
     attrs = post.get("attributes", {})
     title = attrs.get("title", "") or ""
     content = (attrs.get("content") or "")
     body = f"{title}\n{content}"
-    syms = _parse_symbols(body)
-    action, conf = _action_and_conf(body)
+    pid = post.get("id")
 
-    for sym in syms:
-        execute_trade_from_post({
-            "source": "patreon",
-            "action": action,
-            "symbol": sym,
-            "confidence": conf,
-            "amount_usd": os.getenv("PATRON_DOLLARS"),
-            "note": f"patreon:{post.get('id')}"
-        })
-
+    # Download any attached trade-card screenshot *before* parsing, so it
+    # feeds the same text+image parser Discord alerts go through - a
+    # strike/expiry/stop stated only in the image (not the caption) used
+    # to be silently dropped since nothing OCR'd it.
+    image_path = None
     if VISION_AUTO:
         imgs = _download_images_from_post(post)
         if imgs:
-            log.info("Saved %d Patreon images → %s", len(imgs), VISION_RAW)
+            image_path = str(imgs[0])
+            log.info("Saved %d Patreon image(s) → %s", len(imgs), VISION_RAW)
+
+    patron_dollars = os.getenv("PATRON_DOLLARS")
+    handle_alert_text(
+        text=body,
+        image_path=image_path,
+        note=f"patreon:{pid}",
+        source="patreon",
+        amount_usd=float(patron_dollars) if patron_dollars else None,
+    )
 
 def poll_loop():
     global ACCESS

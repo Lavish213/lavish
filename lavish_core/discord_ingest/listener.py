@@ -38,10 +38,10 @@
 from __future__ import annotations
 import os, logging
 from typing import Optional
+from functools import partial
 
 from lavish_core.logger_setup import get_logger
-from lavish_core.vision.extract_signal import parse_alert
-from lavish_core.trading.trade_handler import execute_trade_from_post
+from lavish_core.trading.alert_handler import handle_alert_text as _handle_alert_text
 
 log = get_logger("discord_ingest", log_dir="logs")
 
@@ -51,70 +51,11 @@ WATCH_CHANNEL_IDS = {
     int(c) for c in os.getenv("DISCORD_WATCH_CHANNEL_IDS", "").split(",") if c.strip().isdigit()
 }
 SIGNAL_SOURCE_NAME = os.getenv("DISCORD_SIGNAL_SOURCE_NAME", "discord")
-DEFAULT_CONFIDENCE = float(os.getenv("DISCORD_SIGNAL_DEFAULT_CONFIDENCE", "0.7"))
 
-BUY_WORDS = ("BUY", "CALL", "LONG", "BTO", "ENTRY")
-SELL_WORDS = ("SELL", "PUT", "SHORT", "STC", "EXIT", "CLOSE")
-
-
-def _equity_action_from_text(text: str) -> Optional[str]:
-    up = (text or "").upper()
-    has_buy = any(w in up for w in BUY_WORDS)
-    has_sell = any(w in up for w in SELL_WORDS)
-    if has_buy and not has_sell:
-        return "BUY"
-    if has_sell and not has_buy:
-        return "SELL"
-    return None
-
-
-def handle_alert_text(text: str, image_path: Optional[str] = None, note: str = "") -> None:
-    """
-    Core logic, independent of Discord's client library, so it can be unit
-    tested without a live connection: parse an alert (text and/or an
-    attached trade-card image) and hand it to the execution pipeline.
-    """
-    from pathlib import Path
-    parsed = parse_alert(text=text, img_path=Path(image_path) if image_path else None,
-                          source=SIGNAL_SOURCE_NAME)
-
-    ticker = parsed.get("ticker")
-    if not ticker:
-        log.info("No ticker found in alert, skipping: %r", (text or "")[:200])
-        return
-
-    confidence = parsed.get("confidence") or DEFAULT_CONFIDENCE
-
-    if parsed.get("side") in ("CALL", "PUT") and parsed.get("strike") and parsed.get("expiry"):
-        signal = {
-            "source": SIGNAL_SOURCE_NAME,
-            "ticker": ticker,
-            "side": parsed["side"],
-            "strike": parsed["strike"],
-            "expiry": parsed["expiry"],
-            "confidence": confidence,
-            "target_hint": parsed.get("target_hint"),
-            "stop_hint": parsed.get("stop_hint"),
-            "note": note or parsed.get("notes_excerpt", ""),
-        }
-        log.info("Parsed options alert: %s", signal)
-        execute_trade_from_post(signal)
-        return
-
-    action = _equity_action_from_text(text)
-    if not action:
-        log.info("Ticker %s found but no clear BUY/SELL direction, skipping: %r", ticker, (text or "")[:200])
-        return
-
-    signal = {
-        "source": SIGNAL_SOURCE_NAME,
-        "action": action,
-        "symbol": ticker,
-        "confidence": confidence,
-        "note": note or parsed.get("notes_excerpt", ""),
-    }
-    log.info("Parsed equity alert: %s", signal)
-    execute_trade_from_post(signal)
+# Kept as a module-level alias so existing callers/tests using
+# listener.handle_alert_text(...) keep working; parsing/execution logic
+# itself now lives in lavish_core.trading.alert_handler, shared with Patreon.
+handle_alert_text = partial(_handle_alert_text, source=SIGNAL_SOURCE_NAME)
 
 
 def run() -> None:

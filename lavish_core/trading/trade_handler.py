@@ -1,7 +1,7 @@
 # lavish_core/trading/trade_handler.py
 from __future__ import annotations
-import os
-from datetime import date, datetime
+import os, json
+from datetime import date, datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 
 from lavish_core.logger_setup import get_logger
@@ -25,15 +25,44 @@ TAKE_PROFIT_PCT = float(os.getenv("DEFAULT_TAKE_PROFIT_PCT", "0.02"))
 DEFAULT_OPTION_TRADE_DOLLARS = float(os.getenv("DEFAULT_OPTION_TRADE_DOLLARS", "200"))
 OPTION_STRIKE_TOLERANCE = float(os.getenv("OPTION_STRIKE_TOLERANCE", "5"))
 
+# She posts to Patreon and Discord independently, and it's not consistently
+# one before the other - sometimes Patreon is first by a few minutes. Watch
+# both, whichever fires first executes, and skip the same alert showing up
+# again on the other source within this window.
+SIGNAL_DEDUP_WINDOW_SECONDS = float(os.getenv("SIGNAL_DEDUP_WINDOW_SECONDS", "300"))
+
 def _coerce_side(action: str) -> Optional[str]:
     a = (action or "").strip().lower()
     if a in ("buy", "long"): return "buy"
     if a in ("sell", "short"): return "sell"
     return None
 
+def _find_duplicate_signal(
+    store: HybridStore, symbol: str, side: str, strike: Optional[float] = None, expiry: Optional[str] = None,
+) -> Optional[str]:
+    """Returns the source of an already-recorded matching signal within the dedup window, or None."""
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=SIGNAL_DEDUP_WINDOW_SECONDS)
+    rows = store.fetchall(
+        "SELECT source, payload FROM signals WHERE symbol=? AND side=? AND ts > ? ORDER BY ts DESC",
+        (symbol.upper(), side.lower(), cutoff),
+    )
+    for src, payload_raw in rows:
+        if strike is None and expiry is None:
+            return src
+        try:
+            payload = json.loads(payload_raw) if isinstance(payload_raw, str) else (payload_raw or {})
+        except Exception:
+            payload = {}
+        row_strike, row_expiry = payload.get("strike"), payload.get("expiry")
+        if row_strike is not None and expiry == row_expiry and abs(float(row_strike) - float(strike)) < 0.01:
+            return src
+    return None
+
 def execute_trade_from_post(signal: Dict[str, Any]) -> None:
     """
     Dispatches to the options or equity path based on the signal's shape.
+    Dedupes against the *other* alert source first - see
+    SIGNAL_DEDUP_WINDOW_SECONDS above.
 
     Options signal (from extract_signal.parse_alert/parse_text):
       { ticker, side('CALL'|'PUT'), strike, expiry('YYYY-MM-DD'),
@@ -44,7 +73,28 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
       { source, action('BUY'|'SELL'|etc), symbol, confidence(0..1),
         amount_usd(optional), note(optional) }
     """
-    if signal.get("strike") and signal.get("expiry") and str(signal.get("side", "")).upper() in ("CALL", "PUT"):
+    is_option = bool(signal.get("strike") and signal.get("expiry")
+                      and str(signal.get("side", "")).upper() in ("CALL", "PUT"))
+    symbol = str(signal.get("ticker") or signal.get("symbol") or "").upper().strip()
+    dedup_side = str(signal.get("side") or signal.get("action") or "").lower().strip()
+    source = signal.get("source", "unknown")
+
+    if symbol and dedup_side:
+        store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
+        strike = float(signal["strike"]) if is_option else None
+        expiry = str(signal.get("expiry")) if is_option else None
+        dup_source = _find_duplicate_signal(store, symbol, dedup_side, strike, expiry)
+        if dup_source:
+            log.info("Skip %s %s: duplicate of %s's alert within %.0fs (source=%s)",
+                      dedup_side.upper(), symbol, dup_source, SIGNAL_DEDUP_WINDOW_SECONDS, source)
+            return
+        store.log_signal(
+            symbol=symbol, side=dedup_side, source=source,
+            confidence=float(signal.get("confidence", 0) or 0),
+            payload={"strike": strike, "expiry": expiry, "note": signal.get("note", "")},
+        )
+
+    if is_option:
         _execute_option_trade(signal)
     else:
         _execute_equity_trade(signal)
