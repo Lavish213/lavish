@@ -13,6 +13,7 @@ from typing import Tuple, Optional
 
 from lavish_core.db.hybrid_store import HybridStore
 from lavish_core.trade.broker_alpaca import get_account
+from lavish_core.utils.alerts import post_discord
 
 log = logging.getLogger("circuit_breaker")
 
@@ -70,20 +71,39 @@ def check_ok(store: HybridStore) -> Tuple[bool, str]:
     if day_dd >= DAILY_LOSS_LIMIT_PCT:
         reason = f"daily loss limit hit: down {day_dd:.1%} today (limit {DAILY_LOSS_LIMIT_PCT:.1%})"
         log.error("circuit_breaker: BLOCKING new trades - %s", reason)
+        _alert_once(store, kind=1, message=f"🛑 Circuit breaker tripped: {reason}. New trades blocked.")
         return False, reason
 
     if week_dd >= WEEKLY_LOSS_LIMIT_PCT:
         reason = f"weekly loss limit hit: down {week_dd:.1%} this week (limit {WEEKLY_LOSS_LIMIT_PCT:.1%})"
         log.error("circuit_breaker: BLOCKING new trades - %s", reason)
+        _alert_once(store, kind=2, message=f"🛑 Circuit breaker tripped: {reason}. New trades blocked.")
         return False, reason
 
     consecutive = int(store.get_risk_limits().get("circuit_breaker_consecutive_losses", 0))
     if consecutive >= MAX_CONSECUTIVE_LOSSES:
         reason = f"{consecutive} consecutive losses (limit {MAX_CONSECUTIVE_LOSSES}) - paused pending manual review"
         log.error("circuit_breaker: BLOCKING new trades - %s", reason)
+        _alert_once(store, kind=3, message=f"🛑 Circuit breaker tripped: {reason}. New trades blocked until reset_consecutive_losses() is called.")
         return False, reason
 
+    _alert_once(store, kind=0, message="")  # clears the "already alerted" state once trading resumes
     return True, "ok"
+
+
+def _alert_once(store: HybridStore, kind: int, message: str) -> None:
+    """
+    Fires a Discord alert only on the transition into a given blocked
+    state (or back to healthy), not on every single check_ok() call while
+    still blocked - otherwise every incoming alert during a halt would
+    spam a duplicate notification.
+    """
+    last_kind = int(store.get_risk_limits().get("circuit_breaker_last_alert_kind", 0))
+    if last_kind == kind:
+        return
+    store.set_risk_limits({"circuit_breaker_last_alert_kind": kind})
+    if kind != 0 and message:
+        post_discord(message)
 
 
 def record_trade_outcome(store: HybridStore, pnl: float) -> None:

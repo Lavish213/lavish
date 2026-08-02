@@ -20,11 +20,27 @@ import threading
 from lavish_core.logger_setup import get_logger
 from lavish_core.patreon import patreon_trigger
 from lavish_core.discord_ingest import listener as discord_listener
+from lavish_core.trade.reconcile import reconcile_open_positions, run_periodic_reconciliation
 
 log = get_logger("run_ingest", log_dir="logs")
 
 
 def main() -> None:
+    # Every exit-guardrail thread lives only in this process's memory - on
+    # every start (including a crash-restart) any option position already
+    # open at the broker has no one watching it until this runs. Do it
+    # once immediately, then keep checking periodically in case a single
+    # monitor thread dies without taking the whole process down with it.
+    try:
+        recovered = reconcile_open_positions()
+        if recovered:
+            log.warning("Startup reconciliation recovered %d unmanaged position(s).", recovered)
+        else:
+            log.info("Startup reconciliation: no unmanaged positions found.")
+    except Exception as e:
+        log.error("Startup reconciliation failed: %s", e)
+    threading.Thread(target=run_periodic_reconciliation, name="reconcile-loop", daemon=True).start()
+
     patreon_thread = threading.Thread(target=patreon_trigger.poll_loop, name="patreon-poller", daemon=True)
     patreon_thread.start()
     log.info("Patreon poller started in background thread.")

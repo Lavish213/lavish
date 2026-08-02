@@ -29,6 +29,7 @@ from typing import Optional, Dict, Any, Callable
 
 from lavish_core.trade.broker_alpaca import latest_quote, get_clock
 from lavish_core.trade.options_broker import latest_option_quote, place_option_order
+from lavish_core.utils.alerts import post_discord
 
 log = logging.getLogger("options_exit_monitor")
 
@@ -109,10 +110,15 @@ def watch_and_exit(
             log.error("Exit order failed for %s at %s: %s", contract_symbol, reason, e)
             result = {"status": "exit_order_failed", "reason": reason,
                       "underlying_price": underlying_price, "error": str(e)}
+            post_discord(f"🚨 Failed to submit exit order for {contract_symbol} (trigger: {reason}): {e}. "
+                         f"This position may be unmanaged until manually reviewed.")
         else:
             log.info("Exit (%s) submitted for %s, option_limit=%.2f: %s", reason, contract_symbol, exit_price, order)
             result = {"status": "exited", "reason": reason,
                       "underlying_price": underlying_price, "option_price": exit_price, "order": order}
+            if reason in ("max_hold_timeout", "expiry_force_close"):
+                post_discord(f"⏱️ {contract_symbol} force-closed ({reason}) at {exit_price:.2f} - "
+                             f"neither her levels nor our stop/trail fired before this cutoff.")
         if on_exit:
             on_exit(result)
         return result

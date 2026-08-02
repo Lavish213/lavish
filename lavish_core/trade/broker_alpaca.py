@@ -46,6 +46,13 @@ def get_clock() -> Dict[str, Any]:
         raise RuntimeError(f"Alpaca clock error {r.status_code}: {r.text}")
     return r.json()
 
+def get_positions() -> list:
+    _check_keys()
+    r = requests.get(POS_URL, headers=HEADERS, timeout=20)
+    if r.status_code != 200:
+        raise RuntimeError(f"Alpaca positions error {r.status_code}: {r.text}")
+    return r.json()
+
 def get_position(symbol: str) -> Optional[Dict[str, Any]]:
     _check_keys()
     r = requests.get(f"{POS_URL}/{symbol.upper()}", headers=HEADERS, timeout=20)

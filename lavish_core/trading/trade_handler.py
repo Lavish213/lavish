@@ -11,6 +11,7 @@ from lavish_core.trade.broker_alpaca import latest_quote
 from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
 from lavish_core.trade.circuit_breaker import check_ok as circuit_breaker_check_ok, record_trade_outcome
+from lavish_core.trade.reconcile import mark_watched, unmark_watched
 
 log = get_logger("trade", log_dir="logs")
 
@@ -190,6 +191,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
     def _on_exit(result: Dict[str, Any]) -> None:
         # Runs in the monitor's background thread - use a fresh store
         # connection rather than sharing one across threads.
+        unmark_watched(contract["symbol"])
         exit_store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
         exit_price = result.get("option_price")
         if result.get("status") == "exited" and exit_price is not None:
@@ -204,6 +206,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         else:
             log.warning("Exit monitor for %s ended without a clean fill: %s", contract["symbol"], result)
 
+    mark_watched(contract["symbol"])
     watch_and_exit_async(
         underlying_symbol=ticker,
         contract_symbol=contract["symbol"],
