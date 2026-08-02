@@ -184,8 +184,8 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
     )
 
     if target_hint is None and stop_hint is None:
-        log.warning("No target/stop given for %s - position has no automated exit plan.", contract["symbol"])
-        return
+        log.info("No target/stop given for %s - relying on our own guardrails (stop/trail/expiry) for the exit.",
+                  contract["symbol"])
 
     def _on_exit(result: Dict[str, Any]) -> None:
         # Runs in the monitor's background thread - use a fresh store
@@ -209,6 +209,8 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         contract_symbol=contract["symbol"],
         qty=qty,
         option_side=option_side,
+        entry_price=mid_price,
+        expiry=expiry,
         target_underlying=float(target_hint) if target_hint is not None else None,
         stop_underlying=float(stop_hint) if stop_hint is not None else None,
         on_exit=_on_exit,

@@ -34,6 +34,18 @@ def get_account() -> Dict[str, Any]:
         raise RuntimeError(f"Alpaca account error {r.status_code}: {r.text}")
     return r.json()
 
+def get_clock() -> Dict[str, Any]:
+    """
+    Alpaca's real market clock (is_open, next_open, next_close) - used
+    instead of a hardcoded "4pm ET" so early closes/holidays are handled
+    correctly for the expiry-day forced-exit rule.
+    """
+    _check_keys()
+    r = requests.get(f"{BASE_URL}/v2/clock", headers=HEADERS, timeout=15)
+    if r.status_code != 200:
+        raise RuntimeError(f"Alpaca clock error {r.status_code}: {r.text}")
+    return r.json()
+
 def get_position(symbol: str) -> Optional[Dict[str, Any]]:
     _check_keys()
     r = requests.get(f"{POS_URL}/{symbol.upper()}", headers=HEADERS, timeout=20)
