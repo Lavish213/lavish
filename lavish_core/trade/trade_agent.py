@@ -41,6 +41,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Tuple, Callable
 
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
+from lavish_core.trade.circuit_breaker import check_ok as _circuit_breaker_check_ok
 
 try:
     from lavish_core.trade.broker_alpaca import (
@@ -271,6 +272,19 @@ def place_trade(
         raise ValueError(f"Quantity must be > 0, got {qty}")
 
     qty = float(qty)
+
+    # Circuit breaker only blocks new risk-taking (buys), never closes/sells -
+    # you should always be able to get out of a position, even mid-halt.
+    if side == "buy" and mode in ("paper", "live"):
+        cb_ok, cb_reason = _circuit_breaker_check_ok(store)
+        if not cb_ok:
+            oid = store.submit_order(
+                symbol=symbol, side=side, qty=qty, order_type=order_type,
+                limit_price=limit_price, tif=tif, venue=mode, status="rejected",
+                client_id=client_id, meta={"reason": f"circuit_breaker: {cb_reason}", **meta},
+            )
+            LOG.error("REJECTED %s %s×%s: circuit_breaker: %s", side.upper(), qty, symbol, cb_reason)
+            return {"status": "rejected", "order_id": oid, "reason": f"circuit_breaker: {cb_reason}"}
 
     # Stable client order id for idempotency
     if not client_id:

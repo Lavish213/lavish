@@ -10,6 +10,7 @@ from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fal
 from lavish_core.trade.broker_alpaca import latest_quote
 from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
+from lavish_core.trade.circuit_breaker import check_ok as circuit_breaker_check_ok, record_trade_outcome
 
 log = get_logger("trade", log_dir="logs")
 
@@ -97,6 +98,18 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         log.info("dry mode: would BUY %s x%s @ ~%.2f (no order submitted)", contract["symbol"], qty, mid_price)
         return
 
+    store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
+
+    cb_ok, cb_reason = circuit_breaker_check_ok(store)
+    if not cb_ok:
+        store.submit_order(
+            symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
+            limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
+            meta={"reason": f"circuit_breaker: {cb_reason}", "source": signal.get("source", "discord"), "note": note},
+        )
+        log.error("Skip options trade: circuit_breaker: %s", cb_reason)
+        return
+
     try:
         order = place_option_order(
             contract_symbol=contract["symbol"], side="buy", qty=qty,
@@ -104,21 +117,52 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         )
     except Exception as e:
         log.error("Options order failed for %s: %s", contract["symbol"], e)
+        store.submit_order(
+            symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
+            limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
+            meta={"reason": str(e), "source": signal.get("source", "discord"), "note": note},
+        )
         return
 
     log.info("Options order result: %s", order)
+    oid = store.submit_order(
+        symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
+        limit_price=mid_price, tif="day", venue=TRADE_MODE, status=order.get("status", "submitted"),
+        client_id=order.get("client_order_id"),
+        meta={"broker": "alpaca", "raw": order, "source": signal.get("source", "discord"), "note": note,
+              "ticker": ticker, "option_side": option_side, "strike": float(strike), "expiry": expiry.isoformat()},
+    )
 
-    if target_hint is not None or stop_hint is not None:
-        watch_and_exit_async(
-            underlying_symbol=ticker,
-            contract_symbol=contract["symbol"],
-            qty=qty,
-            option_side=option_side,
-            target_underlying=float(target_hint) if target_hint is not None else None,
-            stop_underlying=float(stop_hint) if stop_hint is not None else None,
-        )
-    else:
+    if target_hint is None and stop_hint is None:
         log.warning("No target/stop given for %s - position has no automated exit plan.", contract["symbol"])
+        return
+
+    def _on_exit(result: Dict[str, Any]) -> None:
+        # Runs in the monitor's background thread - use a fresh store
+        # connection rather than sharing one across threads.
+        exit_store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
+        exit_price = result.get("option_price")
+        if result.get("status") == "exited" and exit_price is not None:
+            pnl = (float(exit_price) - mid_price) * 100 * qty
+            exit_store.log_fill(
+                order_id=oid, symbol=contract["symbol"], side="sell",
+                qty=qty, price=float(exit_price), fee=0.0, venue=TRADE_MODE,
+            )
+            record_trade_outcome(exit_store, pnl)
+            log.info("Closed %s: entry=%.2f exit=%.2f realized_pnl=%.2f (%s)",
+                      contract["symbol"], mid_price, exit_price, pnl, result.get("reason"))
+        else:
+            log.warning("Exit monitor for %s ended without a clean fill: %s", contract["symbol"], result)
+
+    watch_and_exit_async(
+        underlying_symbol=ticker,
+        contract_symbol=contract["symbol"],
+        qty=qty,
+        option_side=option_side,
+        target_underlying=float(target_hint) if target_hint is not None else None,
+        stop_underlying=float(stop_hint) if stop_hint is not None else None,
+        on_exit=_on_exit,
+    )
 
 def _execute_equity_trade(signal: Dict[str, Any]) -> None:
     """
