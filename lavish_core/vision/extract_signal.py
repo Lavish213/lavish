@@ -248,9 +248,19 @@ def _find_target(text: str) -> Optional[float]:
     # “Target $183” or “Target 526” or “Target $1,120”
     m = re.search(r"\btarget\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
     if m: return _to_float(m.group(1))
-    # “Should hit $1,120” (NVDA)
-    m2 = re.search(r"\b(hit|reach|to|should (?:hit|reach))\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
-    if m2: return _to_float(m2.group(2))
+    # “Should hit $1,120” (target stated after the trigger phrase).
+    # Deliberately NOT matching a bare "to" - "up close to $100 million"
+    # isn't a stated target, and a standalone "to" is far too generic a
+    # trigger for what should be a specific, intentional phrase.
+    m2 = re.search(r"\b(should\s+)?(hit|reach)\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
+    if m2: return _to_float(m2.group(3))
+    # “That $1,120 call on NVDA should hit” (target stated BEFORE the
+    # trigger phrase - also her actual real phrasing, seen verbatim in a
+    # real alert). Allow a short gap of a few words between the number and
+    # "should hit/reach" so this doesn't also match an unrelated number
+    # much earlier in a longer post.
+    m3 = re.search(r"\$?\s?(\d{2,5}(?:\.\d{1,2})?)\b(?:\s+\S+){0,6}?\s+should\s+(?:hit|reach)\b", text, re.I)
+    if m3: return _to_float(m3.group(1))
     return None
 
 def _find_stop(text: str) -> Optional[float]:
