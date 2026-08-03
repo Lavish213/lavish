@@ -7,13 +7,14 @@
 # awareness at all, so a Patreon-sourced options alert silently downgraded
 # into a plain equity guess. Both sources now get the same fidelity.
 from __future__ import annotations
-import os
+import os, re
 from pathlib import Path
 from typing import Optional
 
 from lavish_core.logger_setup import get_logger
 from lavish_core.vision.extract_signal import parse_alert
 from lavish_core.trading.trade_handler import execute_trade_from_post
+from lavish_core.utils.alerts import post_discord
 
 log = get_logger("alert_handler", log_dir="logs")
 
@@ -21,6 +22,26 @@ DEFAULT_CONFIDENCE = float(os.getenv("ALERT_DEFAULT_CONFIDENCE", "0.7"))
 
 BUY_WORDS = ("BUY", "CALL", "LONG", "BTO", "ENTRY")
 SELL_WORDS = ("SELL", "PUT", "SHORT", "STC", "EXIT", "CLOSE")
+
+# Real screenshots seen this session showed her also trading perpetual
+# futures/leveraged tokens on Hyperliquid ("MU/USDC-P", "QQQ tokenized
+# perp") - a completely different instrument and risk/leverage profile
+# than plain equity. Alpaca can't execute perps/leveraged tokens at all,
+# and nothing here could safely translate "10x leveraged MU perp" into
+# "buy $500 of plain MU shares" - that's not copying her trade, it's
+# making an unrelated bet on the same ticker. Detect and skip loudly
+# instead of silently downgrading it into an equity buy.
+_PERP_RE = re.compile(
+    r"\b[A-Z]{1,6}[-/]USDC?-?P\b"      # MU/USDC-P, SNDK-USDC-P style pair notation
+    r"|\bperp(?:etual)?s?\b"           # "perp", "perps", "perpetual futures"
+    r"|\btokeniz(?:ed)?\s+perp\b"      # "tokenized perp"
+    r"|\b\d{1,3}x\s*lev(?:erage)?\b",  # "10x leverage" / "5x lev" - not bare "10x" (too hype-language-prone)
+    re.IGNORECASE,
+)
+
+
+def _is_perp_or_leveraged(text: str) -> bool:
+    return bool(_PERP_RE.search(text or ""))
 
 
 def _equity_action_from_text(text: str) -> Optional[str]:
@@ -49,6 +70,17 @@ def handle_alert_text(
     way - trade_handler.execute_trade_from_post() dedupes the second
     source's copy of the same alert.
     """
+    if _is_perp_or_leveraged(text):
+        log.warning("[%s] Alert looks like a perp/leveraged-token trade (not equity/options) - "
+                    "skipping, can't be safely copied as a plain stock buy: %r", source, (text or "")[:200])
+        post_discord(
+            f"⚠️ Skipped a {source} alert that looks like a perpetual futures/leveraged-token trade, "
+            f"not equity or options - this bot can't execute those and won't guess-translate it into "
+            f"a plain stock buy (different leverage/risk profile entirely). Review manually if you want "
+            f"to act on it: {(text or '')[:200]}"
+        )
+        return
+
     parsed = parse_alert(text=text, img_path=Path(image_path) if image_path else None, source=source)
 
     ticker = parsed.get("ticker")
