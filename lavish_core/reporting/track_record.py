@@ -6,15 +6,17 @@
 # Usage:
 #   python -m lavish_core.reporting.track_record [--days 30] [--db path]
 #
-# Limitation, stated plainly rather than silently glossed over: equity
-# entries are logged on fill, but equity *exits* placed as a bracket
-# (take_profit/stop_loss) fill on Alpaca's side without this bot ever
-# polling/logging that fill back into `fills` - so an equity position with
-# no matching sell fill here isn't necessarily still open, it may have
-# closed on the broker and this bot just never recorded it. Options round
-# trips ARE fully recorded (both entry and the exit-monitor's exit fill are
-# logged under the same order_id), so options P&L/win-rate here is
-# trustworthy; equity P&L here is entries-only unless a sell fill exists.
+# Both paths are now fully recorded: options round trips (entry + the exit
+# monitor's exit fill, always logged under the same order_id), and equity
+# bracket round trips (entry + whichever take_profit/stop_loss leg fills,
+# watched by equity_exit_monitor.py and logged under the same order_id).
+# An entry that still shows up under "open entries" below means exactly
+# that - no exit fill has been observed by this bot yet, not "untracked."
+# The one case genuinely outside what this bot can see: a position closed
+# by something other than its own bracket (manual intervention outside the
+# bot, a day order expiring unfilled with the position closed some other
+# way) - equity_exit_monitor.py reports that as "no_fill" in its own logs
+# rather than fabricating an exit fill that never happened.
 from __future__ import annotations
 import argparse, json, re
 from collections import defaultdict
@@ -148,8 +150,8 @@ def print_report(report: Dict[str, Any]) -> None:
     for src, pnl in report["pnl_by_source"].items():
         print(f"  {src:12s} ${pnl:.2f}")
     print(f"\nOpen entries with no recorded exit fill: {report['open_entries_no_recorded_exit']}")
-    print("(see module docstring - equity bracket exits aren't polled/logged back yet, "
-          "so these may already be closed on the broker without this bot knowing)")
+    print("(still genuinely open, or closed by something other than the bot's own bracket/exit "
+          "monitor - see module docstring)")
 
 
 def main() -> None:

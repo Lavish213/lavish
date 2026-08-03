@@ -10,6 +10,7 @@ from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fal
 from lavish_core.trade.broker_alpaca import latest_quote, get_order as broker_get_order, cancel_order as broker_cancel_order
 from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
+from lavish_core.trade.equity_exit_monitor import watch_bracket_async
 from lavish_core.trade.circuit_breaker import check_ok as circuit_breaker_check_ok, record_trade_outcome
 from lavish_core.trade.reconcile import mark_watched, unmark_watched
 from lavish_core.trade.portfolio_risk import check_correlation_ok
@@ -388,6 +389,20 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
         stop_loss=stop_loss,
     )
     log.info("Trade result: %s", out)
+
+    # A bracket's take_profit/stop_loss legs fill on Alpaca's side with no
+    # signal back to this bot unless something watches for it - without
+    # this, the entry's DB order just sits "filled" forever with no linked
+    # exit, and track_record.py has no way to know the position closed.
+    legs = out.get("legs") or []
+    if side == "buy" and out.get("status") == "filled" and (take_profit is not None or stop_loss is not None) and legs:
+        leg_ids = [leg.get("id") for leg in legs if leg.get("id")]
+        if leg_ids:
+            entry_price = float(out.get("filled_avg_price") or ref_price)
+            watch_bracket_async(
+                order_id=out["order_id"], symbol=sym, qty=qty,
+                entry_price=entry_price, leg_ids=leg_ids, venue=TRADE_MODE,
+            )
 
 def main():
     log.info("Trade handler ready (mode=%s, floor=%.2f).", TRADE_MODE, )

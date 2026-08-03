@@ -513,6 +513,11 @@ def place_trade(
                 "client_order_id": client_ord_id,
                 "filled_qty": filled_qty,
                 "filled_avg_price": filled_avg_price,
+                # Bracket orders (take_profit/stop_loss set) come back with
+                # child leg orders under broker_resp["legs"] - the caller
+                # needs their IDs to watch for which leg eventually fills
+                # (see equity_exit_monitor.py). Not present on a plain order.
+                "legs": broker_resp.get("legs") or [],
             }
 
         except Exception as e:
