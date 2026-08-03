@@ -66,6 +66,20 @@ if not KNOWN_TICKERS:
         if s.strip()
     }
 
+# Common English/trading-boilerplate words that fuzzy-match a real
+# whitelisted ticker at or above MIN_TICKER_SCORE (75) in
+# _best_ticker_candidate below - found by scoring her actual standard
+# recap caption ("Trades are looking good... whether you want to hold or
+# take profits") against KNOWN_TICKERS: "hold"/"hodl"/"good" all score
+# exactly 75 against HOOD, and "strike"/"most" score 75-77 against MSTR.
+# "strike" is the dangerous one - it's not just caption filler, it's a
+# real word in actual trade alerts ("$190 strike calls"), so without this
+# exclusion a real alert whose actual ticker OCR's poorly can get silently
+# hijacked to MSTR. Exact-length words only (not substrings), checked
+# before fuzzy scoring so these never reach the fuzzy matcher at all -
+# regardless of what KNOWN_TICKERS ends up containing.
+TICKER_STOPWORDS = {"HOLD", "HODL", "GOOD", "STRIKE", "MOST"}
+
 # ---------- Utilities ----------
 
 def _clean_text(s: str) -> str:
@@ -175,6 +189,7 @@ def _best_ticker_candidate(text: str, anchor_pos: Optional[int] = None) -> Tuple
     # short ticker like "MU" from "am"/"go"/"is"/"on"/"to"-style noise.
     caps = [(m.group().upper(), m.start()) for m in re.finditer(r"\b[A-Za-z]{3,5}\b", text)]
     caps += [(m.group(), m.start()) for m in re.finditer(r"\b[A-Z]{2}\b", text)]
+    caps = [(c, pos) for c, pos in caps if c not in TICKER_STOPWORDS]
     if KNOWN_TICKERS:
         # fuzzy match to known set to avoid FALSE positives like "CALL", "VIEW", etc.
         # A single stray OCR-noise letter (e.g. a garbled leftover from
