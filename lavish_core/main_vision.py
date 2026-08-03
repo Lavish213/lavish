@@ -145,7 +145,7 @@ TICKER_WHITELIST = {
     s.strip().upper()
     for s in os.getenv(
         "WHITELIST_TICKERS",
-        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,AVGO",
+        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV",
     ).split(",")
     if s.strip()
 }

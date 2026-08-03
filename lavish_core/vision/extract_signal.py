@@ -61,7 +61,7 @@ if not KNOWN_TICKERS:
         s.strip().upper()
         for s in os.getenv(
             "WHITELIST_TICKERS",
-            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,AVGO",
+            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV",
         ).split(",")
         if s.strip()
     }
@@ -133,6 +133,14 @@ def _find_all_dates(text: str, year: int) -> List[Tuple[date, int]]:
         except Exception:
             continue
 
+    # "to expire today" / "expires today" - her real, verbatim phrasing
+    # for a same-day (0DTE) trade, which is explicitly her style. Requires
+    # "expir*" specifically near "today", not just any mention of "today"
+    # (which shows up constantly in unrelated captions - "printing today",
+    # "up today" - that aren't expiry statements at all).
+    for m in re.finditer(r"\bexpir\w*\s+today\b", text, re.I):
+        found.append((date.today(), m.start()))
+
     return found
 
 def _parse_month_day(text: str, year: int, anchor_pos: Optional[int] = None) -> Optional[date]:
@@ -145,9 +153,21 @@ def _parse_month_day(text: str, year: int, anchor_pos: Optional[int] = None) -> 
     return candidates[0][0]
 
 def _best_ticker_candidate(text: str, anchor_pos: Optional[int] = None) -> Tuple[Optional[str], int]:
-    # Pick something like "AAPL", "SPY", "NVDA" etc.
-    # 1) strong candidates: ALLCAPS 1–5 letters
-    caps = [(m.group(), m.start()) for m in re.finditer(r"\b[A-Z]{1,5}\b", text)]
+    # Pick something like "AAPL", "SPY", "NVDA" etc. Trade-card UI text is
+    # always properly cased ("MSTR"), but real Discord/chat phrasing isn't
+    # - two real alerts wrote tickers as plain lowercase ("on mstr", "on
+    # spy") mid-sentence, which a caps-only match would never see at all.
+    #
+    # Allowing any case for ANY length backfires though: common two-letter
+    # words are everywhere in ordinary sentences and fuzzy-match a real
+    # ticker deceptively well ("am" -> AMD at 90, "go" -> AVGO at 90 -
+    # both measured, both above the score floor below). All the real
+    # lowercase ticker mentions seen so far are 3+ letters ("mstr", "spy"),
+    # so only relax casing there; 2-letter tokens keep the original
+    # ALL-CAPS-only requirement, which is what actually protects a real
+    # short ticker like "MU" from "am"/"go"/"is"/"on"/"to"-style noise.
+    caps = [(m.group().upper(), m.start()) for m in re.finditer(r"\b[A-Za-z]{3,5}\b", text)]
+    caps += [(m.group(), m.start()) for m in re.finditer(r"\b[A-Z]{2}\b", text)]
     if KNOWN_TICKERS:
         # fuzzy match to known set to avoid FALSE positives like "CALL", "VIEW", etc.
         # A single stray OCR-noise letter (e.g. a garbled leftover from
@@ -217,7 +237,10 @@ def _find_strike_and_side(text: str) -> Tuple[Optional[float], Optional[str], Op
     # screenshot can contain more than one post, and the ticker belonging
     # to THIS strike/side is the one nearest it, not just any ticker
     # found anywhere in the image.
-    m = re.search(r"\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*(calls?|puts?)\b", text, re.I)
+    # "$1,120 Call" (trade-card UI), but also her real chat phrasing:
+    # "$235 strike call" and "$570 call strike" - "strike" can land on
+    # either side of the call/put word, not just be absent.
+    m = re.search(r"\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*(?:strike\s+)?(calls?|puts?)(?:\s+strikes?)?\b", text, re.I)
     if m:
         return _to_float(m.group(1)), m.group(2).rstrip("sS").upper(), m.start()
     return None, None, None
@@ -255,8 +278,8 @@ def _find_entry_price(text: str) -> Optional[float]:
     return cand
 
 def _find_target(text: str) -> Optional[float]:
-    # “Target $183” or “Target 526” or “Target $1,120”
-    m = re.search(r"\btarget\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
+    # “Target $183” or “Target 526” or “Target $1,120” or “My target is $575.00”
+    m = re.search(r"\btarget\s*(?:is\s*)?\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
     if m: return _to_float(m.group(1))
     # “Should hit $1,120” (target stated after the trigger phrase).
     # Deliberately NOT matching a bare "to" - "up close to $100 million"
@@ -274,13 +297,28 @@ def _find_target(text: str) -> Optional[float]:
     return None
 
 def _find_stop(text: str) -> Optional[float]:
+    # "I do not have a stop loss on this trade, I either lose or win" is
+    # real, verbatim phrasing from a real alert - and dangerously, the
+    # reverse-order pattern below used to bridge straight across that
+    # sentence and attach an unrelated *earlier* number (an alternate
+    # strike she mentioned) to this explicit NEGATION, inventing a stop
+    # value for a trade she said has none. Bail out entirely if she's
+    # stated there isn't one - guessing a number here would be worse than
+    # returning nothing, since "no stop" is itself meaningful information
+    # (it's exactly the case our own guardrails exist for).
+    if re.search(r"\b(no|not|don'?t|doesn'?t|without)\b[^.]{0,20}\bstop\s*loss\b", text, re.I):
+        return None
     # “Stop loss 528.20” or “SL 528.20”
     m = re.search(r"\b(stop|sl|stop\s*loss)\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
     if m: return _to_float(m.group(2))
     # “Added @everyone $1,690 stop loss.” (stated BEFORE "stop loss" -
     # her actual real phrasing, seen verbatim in a real alert, same
-    # before/after ambiguity as the target patterns above).
-    m2 = re.search(r"\$?\s?(\d{2,5}(?:\.\d{1,2})?)\b(?:\s+\S+){0,6}?\s+stop\s*loss\b", text, re.I)
+    # before/after ambiguity as the target patterns above). Must not cross
+    # a sentence boundary - the number and "stop loss" have to be in the
+    # same sentence, or this can bridge to an unrelated number entirely
+    # (confirmed against a real alert: "risk the $527 strike instead. No
+    # stop loss..." must NOT attach $527 to that later, unrelated clause).
+    m2 = re.search(r"\$?\s?(\d{2,5}(?:\.\d{1,2})?)\b(?:\s+[^.\s]+){0,6}?\s+stop\s*loss\b", text, re.I)
     if m2: return _to_float(m2.group(1))
     return None
 
