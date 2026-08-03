@@ -27,6 +27,13 @@ TRADE_MODE = os.getenv("TRADE_MODE", "dry").lower()  # dry | paper | live
 # themselves. 1.0 = no scaling (default, unchanged behavior).
 POSITION_SIZE_SCALE = float(os.getenv("POSITION_SIZE_SCALE", "1.0"))
 
+# A real contract seen this session quoted bid $23 / ask $2,690 - a spread
+# so wide the "mid price" isn't a fair fill on either side. Reject rather
+# than submit a limit order into that. Expressed as spread / mid, not
+# spread / bid, so a near-zero bid on a dead contract doesn't produce a
+# nonsensical (or divide-by-near-zero) ratio.
+OPTION_MAX_SPREAD_PCT = float(os.getenv("OPTION_MAX_SPREAD_PCT", "0.50"))
+
 # Same fill-confirmation pattern trade_agent.place_trade uses for equity
 # orders, applied to options entries too - previously an options order was
 # submitted and the exit monitor started immediately after, with no check
@@ -154,6 +161,20 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
     if not mid_price or mid_price <= 0:
         log.warning("Skip options trade: no usable quote for %s", contract.get("symbol"))
         return
+
+    # Thin/illiquid contracts can quote a "mid" that isn't actually
+    # tradeable - a real example seen this session was a contract with
+    # bid $23 / ask $2,690 ("mid" $1,356.50, nowhere near a fair fill on
+    # either side). A limit order at that mid either doesn't fill at all
+    # or, worse, does fill and burns most of the position's value on the
+    # spread alone. Reject outright rather than submit into that.
+    bid, ask = contract.get("bid"), contract.get("ask")
+    if bid is not None and ask is not None and bid > 0:
+        spread_pct = (ask - bid) / mid_price
+        if spread_pct > OPTION_MAX_SPREAD_PCT:
+            log.warning("Skip options trade: %s spread too wide (bid=%.2f ask=%.2f mid=%.2f, %.0f%% > %.0f%% max)",
+                        contract["symbol"], bid, ask, mid_price, spread_pct * 100, OPTION_MAX_SPREAD_PCT * 100)
+            return
 
     dollars = (float(amt) if amt is not None else DEFAULT_OPTION_TRADE_DOLLARS) * POSITION_SIZE_SCALE
     qty = max(1, int(dollars // (mid_price * 100)))
