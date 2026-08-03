@@ -1,7 +1,9 @@
 # lavish_core/trade/broker_alpaca.py
-import os, json, logging, time
+import os, json, logging, time, uuid
 from typing import Optional, Dict, Any
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 log = logging.getLogger("broker_alpaca")
 
@@ -23,13 +25,34 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+# A previous version of this codebase had proper retry/backoff (in a file
+# since removed as a dead duplicate) that never got ported to this one -
+# every call here was a single-attempt raw request with no resilience to
+# a transient network blip or an Alpaca rate limit. Only GET is retried
+# here: POST (place_order) is NOT safe to blindly retry without knowing
+# whether the first attempt already went through server-side - that's
+# handled instead via a stable client_order_id (see place_order) so a
+# duplicate submission is deduplicated by Alpaca itself, not by retrying
+# blind.
+_retry = Retry(
+    total=3, connect=3, read=3,
+    backoff_factor=0.5,  # 0.5s, 1s, 2s
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"],
+    raise_on_status=False,
+    respect_retry_after_header=True,
+)
+SESSION = requests.Session()
+SESSION.mount("https://", HTTPAdapter(max_retries=_retry))
+SESSION.mount("http://", HTTPAdapter(max_retries=_retry))
+
 def _check_keys():
     if not API_KEY or not API_SECRET:
         raise RuntimeError("Missing ALPACA_API_KEY / ALPACA_SECRET_KEY")
 
 def get_account() -> Dict[str, Any]:
     _check_keys()
-    r = requests.get(ACCOUNT_URL, headers=HEADERS, timeout=20)
+    r = SESSION.get(ACCOUNT_URL, headers=HEADERS, timeout=20)
     if r.status_code != 200:
         raise RuntimeError(f"Alpaca account error {r.status_code}: {r.text}")
     return r.json()
@@ -41,21 +64,21 @@ def get_clock() -> Dict[str, Any]:
     correctly for the expiry-day forced-exit rule.
     """
     _check_keys()
-    r = requests.get(f"{BASE_URL}/v2/clock", headers=HEADERS, timeout=15)
+    r = SESSION.get(f"{BASE_URL}/v2/clock", headers=HEADERS, timeout=15)
     if r.status_code != 200:
         raise RuntimeError(f"Alpaca clock error {r.status_code}: {r.text}")
     return r.json()
 
 def get_positions() -> list:
     _check_keys()
-    r = requests.get(POS_URL, headers=HEADERS, timeout=20)
+    r = SESSION.get(POS_URL, headers=HEADERS, timeout=20)
     if r.status_code != 200:
         raise RuntimeError(f"Alpaca positions error {r.status_code}: {r.text}")
     return r.json()
 
 def get_position(symbol: str) -> Optional[Dict[str, Any]]:
     _check_keys()
-    r = requests.get(f"{POS_URL}/{symbol.upper()}", headers=HEADERS, timeout=20)
+    r = SESSION.get(f"{POS_URL}/{symbol.upper()}", headers=HEADERS, timeout=20)
     if r.status_code == 404:
         return None
     if r.status_code != 200:
@@ -64,7 +87,7 @@ def get_position(symbol: str) -> Optional[Dict[str, Any]]:
 
 def get_order(order_id: str) -> Dict[str, Any]:
     _check_keys()
-    r = requests.get(f"{ORDERS_URL}/{order_id}", headers=HEADERS, timeout=15)
+    r = SESSION.get(f"{ORDERS_URL}/{order_id}", headers=HEADERS, timeout=15)
     if r.status_code != 200:
         raise RuntimeError(f"Alpaca get_order error {r.status_code}: {r.text}")
     return r.json()
@@ -78,7 +101,7 @@ def latest_quote(symbol: str) -> Optional[float]:
     _check_keys()
     symbol = symbol.upper()
     try:
-        r = requests.get(
+        r = SESSION.get(
             f"{DATA_URL}/v2/stocks/{symbol}/trades/latest",
             headers=HEADERS, timeout=10,
         )
@@ -90,7 +113,7 @@ def latest_quote(symbol: str) -> Optional[float]:
         log.warning(f"latest_quote trade lookup failed for {symbol}: {e}")
 
     try:
-        r = requests.get(
+        r = SESSION.get(
             f"{DATA_URL}/v2/stocks/{symbol}/quotes/latest",
             headers=HEADERS, timeout=10,
         )
@@ -118,12 +141,28 @@ def place_order(symbol: str, side: str, qty: str,
     type_: market|limit|stop|stop_limit
     """
     _check_keys()
+    # A client_order_id is always set, even if the caller didn't pass one.
+    # Order submission is a POST and isn't blindly retried (see SESSION's
+    # retry policy above, GET-only) precisely because a retry after a
+    # timeout can't tell whether the first attempt already went through.
+    # A stable idempotency key closes that gap the safe way: if this ever
+    # does get submitted twice (a retry layer above this, a network hiccup
+    # that looked like a failure but wasn't), Alpaca rejects the second
+    # submission as a duplicate client_order_id instead of opening a
+    # second position. Minute-bucketed so legitimate distinct orders for
+    # the same symbol/side/qty a few minutes apart still get through.
+    if not client_order_id:
+        minute_bucket = int(time.time() // 60)
+        raw = f"{symbol}|{side}|{qty}|{type_}|{minute_bucket}"
+        client_order_id = "lavish_" + uuid.uuid5(uuid.NAMESPACE_OID, raw).hex[:20]
+
     payload: Dict[str, Any] = {
         "symbol": symbol.upper(),
         "side": side,
         "qty": str(qty),
         "type": type_,
-        "time_in_force": time_in_force
+        "time_in_force": time_in_force,
+        "client_order_id": client_order_id,
     }
     if type_ in ("limit", "stop_limit") and limit_price is not None:
         payload["limit_price"] = str(limit_price)
@@ -133,11 +172,9 @@ def place_order(symbol: str, side: str, qty: str,
             payload["take_profit"] = {"limit_price": str(take_profit)}
         if stop_loss is not None:
             payload["stop_loss"] = {"stop_price": str(stop_loss)}
-    if client_order_id:
-        payload["client_order_id"] = client_order_id
 
     log.info(f"[Alpaca] place_order {json.dumps(payload)}")
-    r = requests.post(ORDERS_URL, headers=HEADERS, data=json.dumps(payload), timeout=20)
+    r = SESSION.post(ORDERS_URL, headers=HEADERS, data=json.dumps(payload), timeout=20)
     if r.status_code not in (200, 201):
         raise RuntimeError(f"Alpaca order error {r.status_code}: {r.text}")
     return r.json()

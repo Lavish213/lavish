@@ -2,12 +2,14 @@
 # Options order execution against Alpaca. Nothing in the rest of the repo
 # could place an options order before this - only plain equity orders existed.
 from __future__ import annotations
-import os, json, logging
+import os, json, logging, time, uuid
 from datetime import date, datetime
 from typing import Optional, Dict, Any, List
-import requests
 
-from lavish_core.trade.broker_alpaca import HEADERS, DATA_URL, _check_keys
+# Reuses broker_alpaca's SESSION (has GET retry/backoff configured) rather
+# than issuing raw requests.get/post here too - see broker_alpaca.py for
+# why POST (order submission) isn't blindly retried the same way GET is.
+from lavish_core.trade.broker_alpaca import HEADERS, DATA_URL, SESSION, _check_keys
 
 log = logging.getLogger("options_broker")
 
@@ -49,7 +51,7 @@ def find_contract(
         "status": "active",
         "limit": 100,
     }
-    r = requests.get(CONTRACTS_URL, headers=HEADERS, params=params, timeout=20)
+    r = SESSION.get(CONTRACTS_URL, headers=HEADERS, params=params, timeout=20)
     if r.status_code != 200:
         log.warning("options contract lookup failed %s: %s", r.status_code, r.text[:300])
         return None
@@ -73,7 +75,7 @@ def latest_option_quote(contract_symbol: str) -> Optional[Dict[str, float]]:
     """Best bid/ask for a contract, so callers can sanity-check spread before submitting."""
     _check_keys()
     try:
-        r = requests.get(
+        r = SESSION.get(
             f"{DATA_URL}/v1beta1/options/quotes/latest",
             headers=HEADERS, params={"symbols": contract_symbol}, timeout=10,
         )
@@ -112,20 +114,28 @@ def place_option_order(
     if order_type == "limit" and limit_price is None:
         raise ValueError("limit_price is required for limit orders")
 
+    # Stable idempotency key, same reasoning as broker_alpaca.place_order:
+    # this POST isn't blindly retried, so if it ever does get submitted
+    # twice, Alpaca rejects the duplicate client_order_id instead of
+    # opening a second position.
+    if not client_order_id:
+        minute_bucket = int(time.time() // 60)
+        raw = f"{contract_symbol}|{side}|{qty}|{order_type}|{minute_bucket}"
+        client_order_id = "lavish_opt_" + uuid.uuid5(uuid.NAMESPACE_OID, raw).hex[:16]
+
     payload: Dict[str, Any] = {
         "symbol": contract_symbol,
         "qty": str(int(qty)),
         "side": side,
         "type": order_type,
         "time_in_force": time_in_force,
+        "client_order_id": client_order_id,
     }
     if order_type == "limit":
         payload["limit_price"] = str(limit_price)
-    if client_order_id:
-        payload["client_order_id"] = client_order_id
 
     log.info("[Alpaca options] place_order %s", json.dumps(payload))
-    r = requests.post(ORDERS_URL, headers=HEADERS, data=json.dumps(payload), timeout=20)
+    r = SESSION.post(ORDERS_URL, headers=HEADERS, data=json.dumps(payload), timeout=20)
     if r.status_code not in (200, 201):
         raise RuntimeError(f"Alpaca options order error {r.status_code}: {r.text}")
     return r.json()
