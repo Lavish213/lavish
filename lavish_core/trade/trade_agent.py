@@ -42,6 +42,7 @@ from typing import Any, Dict, Optional, Tuple, Callable
 
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 from lavish_core.trade.circuit_breaker import check_ok as _circuit_breaker_check_ok
+from lavish_core.logger_setup import configure_root_logging
 
 try:
     from lavish_core.trade.broker_alpaca import (
@@ -54,12 +55,15 @@ try:
 except Exception:
     HAS_ALPACA = False
 
+# Configures the ROOT logger (stdout + logs/lavish.log) exactly once - see
+# configure_root_logging()'s docstring. This used to be a local
+# logging.basicConfig() call here that only added a stdout handler; every
+# other module in lavish_core/trade/ that does plain logging.getLogger(name)
+# (circuit_breaker, broker_alpaca, reconcile, options_broker, etc.) relies
+# on that root config via propagation, so those modules' logs were never
+# reaching a file, only container stdout.
+configure_root_logging()
 LOG = logging.getLogger("trade_agent")
-if not LOG.handlers:
-    logging.basicConfig(
-        level=getattr(logging, os.getenv("LOG_LEVEL", "INFO")),
-        format="%(asctime)s | %(levelname)s | %(message)s",
-    )
 
 # ───────────────────────────────────────────────────────────────
 # Helpers / Env
@@ -483,18 +487,23 @@ def place_trade(
                 venue=mode,
                 status=final_status,
                 client_id=client_ord_id,
-                meta={"broker": "alpaca", "raw": broker_resp, **meta},
+                meta={"broker": "alpaca", "raw": broker_resp, "expected_price": ref_price, **meta},
             )
             if final_status == "filled":
+                actual_price = float(filled_avg_price or ref_price)
+                slippage = round(actual_price - ref_price, 4)
                 store.log_fill(
                     order_id=oid,
                     symbol=symbol,
                     side=side,
                     qty=float(filled_qty or qty),
-                    price=float(filled_avg_price or ref_price),
+                    price=actual_price,
                     fee=0.00,
                     venue=mode,
                 )
+                if abs(slippage) > 0:
+                    LOG.info("Slippage %s %s: expected %.2f actual %.2f (%.4f)",
+                             side.upper(), symbol, ref_price, actual_price, slippage)
             LOG.info("%s %s %s×%s (order=%s broker_id=%s client_id=%s status=%s)",
                      mode.upper(), final_status.upper(), qty, symbol, oid, broker_oid, client_ord_id, final_status)
             return {

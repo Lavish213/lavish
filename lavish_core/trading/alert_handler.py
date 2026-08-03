@@ -88,6 +88,10 @@ def handle_alert_text(
         "confidence": confidence,
         "note": note or parsed.get("notes_excerpt", ""),
         "amount_usd": amount_usd,
+        # She doesn't always give these on equity calls either, but when she
+        # does, trade_handler prefers them over the fixed pct bracket.
+        "target_hint": parsed.get("target_hint"),
+        "stop_hint": parsed.get("stop_hint"),
     }
     log.info("[%s] Parsed equity alert: %s", source, signal)
     execute_trade_from_post(signal)

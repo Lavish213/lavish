@@ -1,22 +1,38 @@
 # lavish_core/trading/trade_handler.py
 from __future__ import annotations
-import os, json
+import os, json, time
 from datetime import date, datetime, timezone, timedelta
 from typing import Dict, Any, Optional
 
 from lavish_core.logger_setup import get_logger
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fallback pricing only
-from lavish_core.trade.broker_alpaca import latest_quote
+from lavish_core.trade.broker_alpaca import latest_quote, get_order as broker_get_order, cancel_order as broker_cancel_order
 from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
 from lavish_core.trade.circuit_breaker import check_ok as circuit_breaker_check_ok, record_trade_outcome
 from lavish_core.trade.reconcile import mark_watched, unmark_watched
+from lavish_core.trade.portfolio_risk import check_correlation_ok
 
 log = get_logger("trade", log_dir="logs")
 
 CONF_FLOOR = float(os.getenv("SIGNAL_CONFIDENCE_FLOOR", "0.55"))
 TRADE_MODE = os.getenv("TRADE_MODE", "dry").lower()  # dry | paper | live
+
+# Staged capital rollout: scales every computed position size uniformly, so
+# going live can start at a fraction of intended size (0.1-0.25) and ramp up
+# as real performance confirms the bot, without touching
+# DEFAULT_TRADE_DOLLARS/DEFAULT_OPTION_TRADE_DOLLARS or amount_usd signals
+# themselves. 1.0 = no scaling (default, unchanged behavior).
+POSITION_SIZE_SCALE = float(os.getenv("POSITION_SIZE_SCALE", "1.0"))
+
+# Same fill-confirmation pattern trade_agent.place_trade uses for equity
+# orders, applied to options entries too - previously an options order was
+# submitted and the exit monitor started immediately after, with no check
+# that the limit order (at mid, which can sit unfilled on a wide spread)
+# actually filled first.
+OPTIONS_FILL_POLL_ATTEMPTS = int(os.getenv("OPTIONS_FILL_POLL_ATTEMPTS", "5"))
+OPTIONS_FILL_POLL_INTERVAL_SEC = float(os.getenv("OPTIONS_FILL_POLL_INTERVAL_SEC", "1.0"))
 
 # Bracket protection for new long entries. Without this, a submitted order
 # had no exit plan at all - a losing position just sat there indefinitely.
@@ -138,7 +154,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         log.warning("Skip options trade: no usable quote for %s", contract.get("symbol"))
         return
 
-    dollars = float(amt) if amt is not None else DEFAULT_OPTION_TRADE_DOLLARS
+    dollars = (float(amt) if amt is not None else DEFAULT_OPTION_TRADE_DOLLARS) * POSITION_SIZE_SCALE
     qty = max(1, int(dollars // (mid_price * 100)))
 
     log.info("🔔 options signal → %s %s $%.2f exp %s (contract=%s qty=%s mid=%.2f mode=%s target=%s stop=%s)",
@@ -161,6 +177,16 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         log.error("Skip options trade: circuit_breaker: %s", cb_reason)
         return
 
+    corr_ok, corr_reason = check_correlation_ok(ticker)
+    if not corr_ok:
+        store.submit_order(
+            symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
+            limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
+            meta={"reason": corr_reason, "source": signal.get("source", "discord"), "note": note},
+        )
+        log.error("Skip options trade: %s", corr_reason)
+        return
+
     try:
         order = place_option_order(
             contract_symbol=contract["symbol"], side="buy", qty=qty,
@@ -176,12 +202,60 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         return
 
     log.info("Options order result: %s", order)
+
+    # Confirm the entry actually filled before starting exit monitoring -
+    # a limit order resting at mid on a wide options spread can sit open
+    # for a while (or never fill). Mirrors trade_agent.place_trade's
+    # equity fill-poll; without this, the exit monitor previously started
+    # tracking a position that might not exist yet.
+    broker_oid = order.get("id")
+    final_status = order.get("status", "submitted")
+    filled_qty = order.get("filled_qty")
+    filled_avg_price = order.get("filled_avg_price")
+    if broker_oid and TRADE_MODE in ("paper", "live"):
+        for _ in range(OPTIONS_FILL_POLL_ATTEMPTS):
+            if final_status in ("filled", "canceled", "expired", "rejected"):
+                break
+            time.sleep(OPTIONS_FILL_POLL_INTERVAL_SEC)
+            try:
+                polled = broker_get_order(broker_oid)
+                final_status = polled.get("status", final_status)
+                filled_qty = polled.get("filled_qty", filled_qty)
+                filled_avg_price = polled.get("filled_avg_price", filled_avg_price)
+            except Exception as e:
+                log.warning("Options order status poll failed for %s: %s", broker_oid, e)
+                break
+
     oid = store.submit_order(
         symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
-        limit_price=mid_price, tif="day", venue=TRADE_MODE, status=order.get("status", "submitted"),
+        limit_price=mid_price, tif="day", venue=TRADE_MODE, status=final_status,
         client_id=order.get("client_order_id"),
         meta={"broker": "alpaca", "raw": order, "source": signal.get("source", "discord"), "note": note,
-              "ticker": ticker, "option_side": option_side, "strike": float(strike), "expiry": expiry.isoformat()},
+              "ticker": ticker, "option_side": option_side, "strike": float(strike), "expiry": expiry.isoformat(),
+              "expected_price": mid_price, "filled_avg_price": filled_avg_price},
+    )
+
+    if final_status not in ("filled", "partially_filled"):
+        log.warning("Options order for %s never confirmed filled after %d polls (status=%s) - canceling, no exit monitor started.",
+                    contract["symbol"], OPTIONS_FILL_POLL_ATTEMPTS, final_status)
+        if broker_oid and TRADE_MODE in ("paper", "live"):
+            try:
+                broker_cancel_order(broker_oid)
+            except Exception as e:
+                log.warning("Cancel of unfilled options order %s failed: %s", broker_oid, e)
+        return
+
+    # Use the real fill price (slippage vs. the mid_price we sized/quoted
+    # against) for both the exit-monitor's entry baseline and P&L, not the
+    # pre-fill estimate.
+    entry_price = float(filled_avg_price) if filled_avg_price else mid_price
+    filled_qty_n = int(float(filled_qty)) if filled_qty else qty
+    slippage = round(entry_price - mid_price, 4)
+    log.info("Options entry filled: %s qty=%s entry=%.2f (quoted mid=%.2f, slippage=%.4f)",
+              contract["symbol"], filled_qty_n, entry_price, mid_price, slippage)
+    store.log_fill(
+        order_id=oid, symbol=contract["symbol"], side="buy",
+        qty=filled_qty_n, price=entry_price, fee=0.0, venue=TRADE_MODE,
     )
 
     if target_hint is None and stop_hint is None:
@@ -195,14 +269,14 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         exit_store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
         exit_price = result.get("option_price")
         if result.get("status") == "exited" and exit_price is not None:
-            pnl = (float(exit_price) - mid_price) * 100 * qty
+            pnl = (float(exit_price) - entry_price) * 100 * filled_qty_n
             exit_store.log_fill(
                 order_id=oid, symbol=contract["symbol"], side="sell",
-                qty=qty, price=float(exit_price), fee=0.0, venue=TRADE_MODE,
+                qty=filled_qty_n, price=float(exit_price), fee=0.0, venue=TRADE_MODE,
             )
             record_trade_outcome(exit_store, pnl)
             log.info("Closed %s: entry=%.2f exit=%.2f realized_pnl=%.2f (%s)",
-                      contract["symbol"], mid_price, exit_price, pnl, result.get("reason"))
+                      contract["symbol"], entry_price, exit_price, pnl, result.get("reason"))
         else:
             log.warning("Exit monitor for %s ended without a clean fill: %s", contract["symbol"], result)
 
@@ -210,9 +284,9 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
     watch_and_exit_async(
         underlying_symbol=ticker,
         contract_symbol=contract["symbol"],
-        qty=qty,
+        qty=filled_qty_n,
         option_side=option_side,
-        entry_price=mid_price,
+        entry_price=entry_price,
         expiry=expiry,
         target_underlying=float(target_hint) if target_hint is not None else None,
         stop_underlying=float(stop_hint) if stop_hint is not None else None,
@@ -230,6 +304,8 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
     conf  = float(signal.get("confidence", 0) or 0)
     note  = signal.get("note", "")
     amt   = signal.get("amount_usd")  # may be None
+    target_hint = signal.get("target_hint")
+    stop_hint = signal.get("stop_hint")
 
     if not sym or not side:
         log.info("Skip trade: missing symbol/side in %s", signal)
@@ -249,20 +325,53 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
     except Exception as e:
         log.warning("latest_quote failed for %s, falling back to dry price: %s", sym, e)
         ref_price = _dry_price(sym)
-    dollars = float(amt) if amt is not None else float(os.getenv("DEFAULT_TRADE_DOLLARS", "500"))
+    dollars = (float(amt) if amt is not None else float(os.getenv("DEFAULT_TRADE_DOLLARS", "500"))) * POSITION_SIZE_SCALE
     qty = max(1.0, round(dollars / max(0.01, ref_price), 0))
 
     meta = {"source": signal.get("source", "patreon"), "confidence": conf, "note": note}
 
     # Only bracket new long entries. A "sell" here is closing/shorting, not
     # opening a position, so there's nothing to attach a bracket exit to.
+    # Prefer her stated target/stop when she gave one (same principle as the
+    # options path) - only fall back to our fixed pct bracket for whichever
+    # side she didn't specify, or if her number fails a basic sanity check
+    # (a target below current price or a stop above it is a parsing miss,
+    # not a real level - trust the safe default instead of that number).
     take_profit = stop_loss = None
     if side == "buy" and ref_price > 0:
         take_profit = round(ref_price * (1 + TAKE_PROFIT_PCT), 2)
         stop_loss = round(ref_price * (1 - STOP_LOSS_PCT), 2)
+        if target_hint is not None:
+            t = float(target_hint)
+            if t > ref_price:
+                take_profit = round(t, 2)
+            else:
+                log.warning("Ignoring target_hint %.2f for %s (not above ref %.2f) - using default TP",
+                            t, sym, ref_price)
+        if stop_hint is not None:
+            s = float(stop_hint)
+            if s < ref_price:
+                stop_loss = round(s, 2)
+            else:
+                log.warning("Ignoring stop_hint %.2f for %s (not below ref %.2f) - using default SL",
+                            s, sym, ref_price)
 
-    log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f, tp=%s, sl=%s)",
-             side.upper(), sym, qty, conf, TRADE_MODE, ref_price, take_profit, stop_loss)
+    # Same concentration check as the options path - only gates new long
+    # entries, same reasoning as the bracket above (a sell is reducing/
+    # closing exposure, not adding to it).
+    if side == "buy" and TRADE_MODE in ("paper", "live"):
+        corr_ok, corr_reason = check_correlation_ok(sym)
+        if not corr_ok:
+            store.submit_order(
+                symbol=sym, side=side, qty=qty, order_type="market",
+                tif="day", venue=TRADE_MODE, status="rejected",
+                meta={"reason": corr_reason, **meta},
+            )
+            log.error("Skip trade: %s", corr_reason)
+            return
+
+    log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f, tp=%s, sl=%s, her_target=%s, her_stop=%s)",
+             side.upper(), sym, qty, conf, TRADE_MODE, ref_price, take_profit, stop_loss, target_hint, stop_hint)
 
     out = place_trade(
         store=store,
