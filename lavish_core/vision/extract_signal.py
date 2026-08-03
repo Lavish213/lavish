@@ -107,7 +107,14 @@ def _find_all_dates(text: str, year: int) -> List[Tuple[date, int]]:
     # let the caller pick by proximity to the actual trade (anchor_pos).
     found: List[Tuple[date, int]] = []
 
-    for m in re.finditer(r"\b([A-Za-z]{3,9})\s+(\d{1,2})\b", text):
+    # \s* (not \s+) so a glued "NOV1st" matches the same as "Nov 1st" or
+    # "Nov 1" - and an optional ordinal suffix (st/nd/rd/th) so "1st"/"31st"
+    # match too. Plain \d{1,2}\b alone never matched an ordinal day: "1st"
+    # has no word boundary between the digit and the trailing letters (both
+    # are \w), so "May 1st" was silently unparsed before this. Only month
+    # names in MONTHS pass through below, so this doesn't turn arbitrary
+    # word+digit pairs ("SPY190") into fake dates.
+    for m in re.finditer(r"\b([A-Za-z]{3,9})\s*(\d{1,2})(?:st|nd|rd|th)?\b", text, re.I):
         mon = m.group(1).lower()
         if mon not in MONTHS:
             continue
