@@ -72,7 +72,9 @@ for name in candidate_dbs:
 else:
     DEFAULT_DB = data_path / "brain.db"  # fallback path
 
-print(f"🔍 Using database at: {DEFAULT_DB.resolve()}")
+from lavish_core.logger_setup import get_logger
+_log = get_logger("hybrid_store", log_dir="logs")
+_log.info(f"Using database at: {DEFAULT_DB.resolve()}")
 
 DEFAULT_REDIS = "redis://localhost:6379/0"
 

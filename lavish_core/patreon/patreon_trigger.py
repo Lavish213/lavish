@@ -101,7 +101,16 @@ def poll_loop():
     seen: set[str] = set()
     base = f"{API}/campaigns/{cid}/posts?fields[post]=title,content,created_at,post_type&page[count]=10&sort=-created"
 
+    # A periodic "still alive" line so someone tailing logs can tell "quietly
+    # healthy, no new posts" apart from "silently stopped polling" without
+    # having to infer it from the absence of any log line at all.
+    heartbeat_every = max(1, int(900 // max(1, POLL_SECONDS)))  # ~every 15 min
+    loop_count = 0
+
     while True:
+        loop_count += 1
+        if loop_count % heartbeat_every == 0:
+            log.info("Patreon poller heartbeat: alive, %d post(s) seen total.", len(seen))
         try:
             r = requests.get(base, headers=_headers(), timeout=25)
             if r.status_code == 401:
