@@ -95,45 +95,54 @@ def _nearest_friday(d: date) -> date:
     delta = (4 - wd) % 7
     return d + timedelta(days=delta)
 
-def _parse_numeric_date(text: str, year: int) -> Optional[date]:
-    # e.g., "5/24", "5/31", "07/24/26" - the format actually used in her
-    # alerts ("SPY $528.00 Put 5/24"), as opposed to the month-name format
-    # ("May 31") the OCR trade-card screenshots tend to show.
-    m = re.search(r"\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b", text)
-    if not m:
-        return None
-    mm, dd = int(m.group(1)), int(m.group(2))
-    if not (1 <= mm <= 12 and 1 <= dd <= 31):
-        return None
-    yy = m.group(3)
-    if yy:
-        yy = int(yy)
-        y = yy + 2000 if yy < 100 else yy
-    else:
-        y = year
-    try:
-        d = date(y, mm, dd)
-        if yy is None and d < date.today():
-            d = date(year + 1, mm, dd)
-        return d
-    except Exception:
-        return None
+def _find_all_dates(text: str, year: int) -> List[Tuple[date, int]]:
+    # Every post has its OWN caption timestamp visible in the OCR'd text
+    # ("May 23, 2024" under the username) as well as - separately - the
+    # option's actual expiry, either as a numeric date next to the strike
+    # ("SPY $528.00 Put 5/24") or a month-name date on a UI tab ("May 31").
+    # Both the caption date and the real expiry match the same date
+    # patterns, and the caption date almost always appears earlier in the
+    # text - so a plain "first match wins" search reliably grabs the
+    # wrong one. Collect every candidate with its position instead, and
+    # let the caller pick by proximity to the actual trade (anchor_pos).
+    found: List[Tuple[date, int]] = []
 
-def _parse_month_day(text: str, year: int) -> Optional[date]:
-    # e.g., "May 31", "Jun 7", "June 21"
-    m = re.search(r"\b([A-Za-z]{3,9})\s+(\d{1,2})\b", text)
-    if not m:
-        return _parse_numeric_date(text, year)
-    mon = m.group(1).lower()
-    day = int(m.group(2))
-    if mon not in MONTHS:
-        return _parse_numeric_date(text, year)
-    mm = MONTHS[mon]
-    try:
-        d = date(year, mm, day)
-        return _nearest_friday(d)
-    except Exception:
+    for m in re.finditer(r"\b([A-Za-z]{3,9})\s+(\d{1,2})\b", text):
+        mon = m.group(1).lower()
+        if mon not in MONTHS:
+            continue
+        try:
+            d = _nearest_friday(date(year, MONTHS[mon], int(m.group(2))))
+            if d < date.today():
+                d = _nearest_friday(date(year + 1, MONTHS[mon], int(m.group(2))))
+            found.append((d, m.start()))
+        except Exception:
+            continue
+
+    for m in re.finditer(r"\b(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?\b", text):
+        mm, dd = int(m.group(1)), int(m.group(2))
+        if not (1 <= mm <= 12 and 1 <= dd <= 31):
+            continue
+        yy = m.group(3)
+        y = (int(yy) + 2000 if int(yy) < 100 else int(yy)) if yy else year
+        try:
+            d = date(y, mm, dd)
+            if not yy and d < date.today():
+                d = date(year + 1, mm, dd)
+            found.append((d, m.start()))
+        except Exception:
+            continue
+
+    return found
+
+def _parse_month_day(text: str, year: int, anchor_pos: Optional[int] = None) -> Optional[date]:
+    candidates = _find_all_dates(text, year)
+    if not candidates:
         return None
+    if anchor_pos is not None:
+        candidates.sort(key=lambda c: abs(c[1] - anchor_pos))
+        return candidates[0][0]
+    return candidates[0][0]
 
 def _best_ticker_candidate(text: str, anchor_pos: Optional[int] = None) -> Tuple[Optional[str], int]:
     # Pick something like "AAPL", "SPY", "NVDA" etc.
@@ -257,8 +266,22 @@ def _extract(text: str, img_path: Path) -> Dict[str, Any]:
         side = _find_side(text)  # plain-text fallback, no strike+side pairing found
     ticker, ticker_score = _best_ticker_candidate(text, anchor_pos=anchor_pos)
     entry  = _find_entry_price(text)
-    # expiry from phrases like “May 24 / May 31 / Jun 7 …”
-    expiry = _parse_month_day(text, year=now.year) or _parse_month_day(text, year=now.year+1)
+    # expiry from phrases like “May 24 / May 31 / Jun 7 …” - anchored to
+    # the strike/side match so a post's own caption date ("May 23, 2024")
+    # doesn't get picked up ahead of the actual expiry elsewhere in frame.
+    expiry = (_parse_month_day(text, year=now.year, anchor_pos=anchor_pos)
+              or _parse_month_day(text, year=now.year + 1, anchor_pos=anchor_pos))
+    # A date-picker UI showing several selectable expiry tabs at once
+    # ("May 31  Jun 7  Jun 14  Jun 21") can't be disambiguated by OCR text
+    # alone - there's no way to tell which tab was actually highlighted.
+    # Every alert seen from her has been a 0-14 day weekly; a resolved
+    # expiry far outside that is more likely picker-tab noise than a real
+    # long-dated play, and an implausible expiry is dangerous the same way
+    # an implausible strike is - it can still resolve to a real, valid,
+    # WRONG contract. Treat anything beyond 45 days as unknown rather than
+    # trade on a guess.
+    if expiry is not None and (expiry - now.date()).days > 45:
+        expiry = None
     target = _find_target(text)
     stop   = _find_stop(text)
 
