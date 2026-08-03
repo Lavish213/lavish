@@ -92,11 +92,55 @@ def get_order(order_id: str) -> Dict[str, Any]:
         raise RuntimeError(f"Alpaca get_order error {r.status_code}: {r.text}")
     return r.json()
 
+def cancel_order(order_id: str) -> bool:
+    """
+    Cancels a resting (not-yet-filled) order. Used when a submitted order
+    (e.g. an options limit order that never got confirmed as filled after
+    polling) shouldn't be left open unmonitored - True if the cancel was
+    accepted, False if the order already reached a terminal state (Alpaca
+    returns 422/404 for those, which isn't an error worth raising on here).
+    """
+    _check_keys()
+    r = SESSION.delete(f"{ORDERS_URL}/{order_id}", headers=HEADERS, timeout=15)
+    if r.status_code in (200, 204):
+        return True
+    if r.status_code in (404, 422):
+        log.info("cancel_order %s: already terminal (%s)", order_id, r.status_code)
+        return False
+    raise RuntimeError(f"Alpaca cancel_order error {r.status_code}: {r.text}")
+
+def _yfinance_fallback_quote(symbol: str) -> Optional[float]:
+    """
+    Last resort when Alpaca's data API is down/rate-limited/misconfigured -
+    every price lookup in this bot (position sizing, risk sanity checks,
+    equity bracket levels) previously had a single point of failure on
+    Alpaca's data feed specifically. yfinance is unauthenticated (no keys
+    needed) and covers the same tickers, so it's a reasonable fallback for
+    a rough price even though it's not real-time/NBBO quality - good enough
+    to keep sizing/risk checks alive during an Alpaca data outage rather
+    than freezing all trading on an unrelated feed problem.
+    """
+    try:
+        import yfinance as yf
+        t = yf.Ticker(symbol)
+        fast = getattr(t, "fast_info", None)
+        if fast:
+            p = fast.get("lastPrice") if hasattr(fast, "get") else getattr(fast, "last_price", None)
+            if p:
+                return float(p)
+        hist = t.history(period="1d", interval="1m")
+        if hist is not None and not hist.empty:
+            return float(hist["Close"].iloc[-1])
+    except Exception as e:
+        log.warning(f"yfinance fallback quote failed for {symbol}: {e}")
+    return None
+
 def latest_quote(symbol: str) -> Optional[float]:
     """
     Real last-trade price from Alpaca's market data API, with a quote-midpoint
-    fallback. Returns None (never raises) so callers can soft-fail to other
-    pricing when the market is closed or the symbol has no recent data.
+    fallback, then a yfinance fallback if Alpaca's data API is unreachable
+    entirely. Returns None (never raises) so callers can soft-fail to a dry
+    price when even yfinance has nothing (market fully closed, bad symbol).
     """
     _check_keys()
     symbol = symbol.upper()
@@ -126,6 +170,11 @@ def latest_quote(symbol: str) -> Optional[float]:
                 return float(ap or bp)
     except Exception as e:
         log.warning(f"latest_quote quote lookup failed for {symbol}: {e}")
+
+    fallback = _yfinance_fallback_quote(symbol)
+    if fallback:
+        log.warning(f"latest_quote: Alpaca data unavailable for {symbol}, used yfinance fallback price {fallback}")
+        return fallback
 
     return None
 
