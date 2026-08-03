@@ -61,7 +61,7 @@ if not KNOWN_TICKERS:
         s.strip().upper()
         for s in os.getenv(
             "WHITELIST_TICKERS",
-            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR",
+            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,AVGO",
         ).split(",")
         if s.strip()
     }
@@ -157,12 +157,22 @@ def _best_ticker_candidate(text: str, anchor_pos: Optional[int] = None) -> Tuple
         # construction, proximity-based selection below would otherwise
         # favor noise over the real, full-length ticker. None of the
         # tickers actually in use are 1 character, so require >=2.
+        # A ticker that's simply missing from the whitelist (e.g. "AVGO"
+        # OCR'd correctly but not a known symbol yet) can't match itself -
+        # it can only score weakly against whatever IS whitelisted. Without
+        # a floor, that weak match still "wins" by default, silently
+        # trading a real, wrong, whitelisted ticker instead of admitting
+        # "don't know". Observed noise (toggle-button words, OCR
+        # fragments) tops out around 60 in practice; genuine near-miss OCR
+        # of a real whitelisted ticker scores well above that - 75 is a
+        # safe floor between the two.
+        MIN_TICKER_SCORE = 75
         candidates = []  # (score, position, matched_ticker)
         for c, pos in caps:
             if len(c) < 2:
                 continue
             match, score, _ = process.extractOne(c, KNOWN_TICKERS, scorer=fuzz.WRatio)
-            if match and score > 0:
+            if match and score >= MIN_TICKER_SCORE:
                 candidates.append((int(score), pos, match))
         if not candidates:
             return (None, 0)
@@ -267,6 +277,11 @@ def _find_stop(text: str) -> Optional[float]:
     # “Stop loss 528.20” or “SL 528.20”
     m = re.search(r"\b(stop|sl|stop\s*loss)\s*\$?\s*(\d{2,5}(?:\.\d{1,2})?)", text, re.I)
     if m: return _to_float(m.group(2))
+    # “Added @everyone $1,690 stop loss.” (stated BEFORE "stop loss" -
+    # her actual real phrasing, seen verbatim in a real alert, same
+    # before/after ambiguity as the target patterns above).
+    m2 = re.search(r"\$?\s?(\d{2,5}(?:\.\d{1,2})?)\b(?:\s+\S+){0,6}?\s+stop\s*loss\b", text, re.I)
+    if m2: return _to_float(m2.group(1))
     return None
 
 def _extract(text: str, img_path: Path) -> Dict[str, Any]:

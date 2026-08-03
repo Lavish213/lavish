@@ -36,7 +36,7 @@ def getenv(key, default=None):
     return v if (v is not None and str(v).strip() != "") else default
 
 # Core env config
-WHITELIST = set([s.strip().upper() for s in getenv("WHITELIST_TICKERS", "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR").split(",") if s.strip()])
+WHITELIST = set([s.strip().upper() for s in getenv("WHITELIST_TICKERS", "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,AVGO").split(",") if s.strip()])
 NEWSAPI_KEY = getenv("NEWSAPI_KEY")                 # optional
 RSS_URLS    = [u.strip() for u in getenv("RSS_URLS", "").split(",") if u.strip()]
 TRUSTED_SOURCES = set([s.strip().lower() for s in getenv("TRUSTED_SOURCES", "wsj.com,bloomberg.com,ft.com,reuters.com,cnbc.com,seekingalpha.com").split(",") if s.strip()])
