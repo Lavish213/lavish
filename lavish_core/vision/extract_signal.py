@@ -135,44 +135,93 @@ def _parse_month_day(text: str, year: int) -> Optional[date]:
     except Exception:
         return None
 
-def _best_ticker_candidate(text: str) -> Tuple[Optional[str], int]:
+def _best_ticker_candidate(text: str, anchor_pos: Optional[int] = None) -> Tuple[Optional[str], int]:
     # Pick something like "AAPL", "SPY", "NVDA" etc.
     # 1) strong candidates: ALLCAPS 1–5 letters
-    caps = re.findall(r"\b[A-Z]{1,5}\b", text)
+    caps = [(m.group(), m.start()) for m in re.finditer(r"\b[A-Z]{1,5}\b", text)]
     if KNOWN_TICKERS:
         # fuzzy match to known set to avoid FALSE positives like "CALL", "VIEW", etc.
-        best = None
-        best_score = 0
-        for c in caps:
+        # A single stray OCR-noise letter (e.g. a garbled leftover from
+        # "Call"/"Put" itself) can score deceptively high (80-90+) against
+        # a short ticker via WRatio's partial-match scoring - and since
+        # such artifacts sit right next to the strike/side text by
+        # construction, proximity-based selection below would otherwise
+        # favor noise over the real, full-length ticker. None of the
+        # tickers actually in use are 1 character, so require >=2.
+        candidates = []  # (score, position, matched_ticker)
+        for c, pos in caps:
+            if len(c) < 2:
+                continue
             match, score, _ = process.extractOne(c, KNOWN_TICKERS, scorer=fuzz.WRatio)
-            if score > best_score:
-                best, best_score = match, int(score)
+            if match and score > 0:
+                candidates.append((int(score), pos, match))
+        if not candidates:
+            return (None, 0)
+        if anchor_pos is not None:
+            # A scrolled/multi-post screenshot can mention more than one
+            # ticker - the one that belongs to the actual strike/side match
+            # (anchor_pos) is usually the one closest to it, not just
+            # whichever scores highest on fuzzy match alone. But an exact
+            # (100-score) match should beat a merely-close partial match -
+            # e.g. an OCR-split fragment like "NV"/"DA" from a *different*
+            # ticker mentioned in passing ("NVDA earnings will affect the
+            # trade") can score 90 and sit closer to the anchor than the
+            # correct ticker's own full, exact "QQQ" match. Margin is tight
+            # (3, not 10) so only near-perfect matches compete on
+            # proximity - this is a tiebreaker among strong matches, not a
+            # way to let a weak nearby match win over a strong distant one.
+            best_score = max(c[0] for c in candidates)
+            near_best = [c for c in candidates if c[0] >= best_score - 3]
+            near_best.sort(key=lambda c: abs(c[1] - anchor_pos))
+            return (near_best[0][2], near_best[0][0])
+        best_score, _, best = max(candidates, key=lambda c: c[0])
         return (best, best_score)
     else:
         # heuristic: ignore common words
         blacklist = {"CALL","PUT","VIEW","EVERYONE","TODAY","BUY","SELL","SPY","GME","NVDA","META","ORCL"}
         # NOTE: leaving SPY/NVDA/etc. in blacklist would remove them; remove from blacklist:
         blacklist = {"CALL","PUT","VIEW","EVERYONE","TODAY","BUY","SELL"}
-        for c in caps:
+        for c, _pos in caps:
             if c not in blacklist:
                 return (c, 60)
         return (None, 0)
 
+def _find_strike_and_side(text: str) -> Tuple[Optional[float], Optional[str], Optional[int]]:
+    # Trade-card UIs (Robinhood-style) show BOTH "Call" and "Put" as toggle
+    # button labels regardless of which is actually selected - a plain
+    # independent search for "PUT" anywhere in the text returns PUT on
+    # almost every screenshot of this UI, including calls, because the
+    # word "Put" is always present as a button label. The side that
+    # matters is the one written right next to the strike price itself
+    # ("$1,120 Call"), so pull both from the same match. Also returns the
+    # match position, used to anchor ticker selection - a scrolled
+    # screenshot can contain more than one post, and the ticker belonging
+    # to THIS strike/side is the one nearest it, not just any ticker
+    # found anywhere in the image.
+    m = re.search(r"\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*(calls?|puts?)\b", text, re.I)
+    if m:
+        return _to_float(m.group(1)), m.group(2).rstrip("sS").upper(), m.start()
+    return None, None, None
+
 def _find_side(text: str) -> Optional[str]:
-    if re.search(r"\bPUT\b", text, re.I):  return "PUT"
-    if re.search(r"\bCALL\b", text, re.I): return "CALL"
+    # Fallback for plain-text alerts with no visible strike+side pairing
+    # (e.g. "buying NVDA calls here", no trade-card screenshot attached).
+    # Plural forms ("calls"/"puts") matter - very common casual phrasing
+    # ("grabbing calls", "loading puts") that a bare \bCALL\b/\bPUT\b
+    # wouldn't match since "s" breaks the trailing word boundary.
+    if re.search(r"\bputs?\b", text, re.I):  return "PUT"
+    if re.search(r"\bcalls?\b", text, re.I): return "CALL"
     return None
 
 def _find_strike(text: str) -> Optional[float]:
-    # $487.5 Call, 528.00 Put, 1120 Call, etc.
-    m = re.search(r"\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*(?:call|put)\b", text, re.I)
-    if m:
-        return _to_float(m.group(1))
-    # sometimes “$528.00” appears near a big “SPY $528.00 Put”
-    m2 = re.search(r"\b(?:\$|USD)?\s*(\d{2,4}(?:\.\d{1,2})?)\s*(?:\$)?\b", text)
-    if m2:
-        return _to_float(m2.group(1))
-    return None
+    # Only the paired strike+call/put match is trusted. A previous fallback
+    # here matched *any* 2-4 digit number anywhere in the text when the
+    # paired match failed (e.g. on badly garbled OCR) - on real screenshots
+    # that produced a confidently-wrong strike (grabbed a stray "18" from
+    # unrelated noise) that resolved to a real, wrong, tradeable contract.
+    # No strike is safer than a wrong one - the caller skips the trade.
+    strike, _, _ = _find_strike_and_side(text)
+    return strike
 
 def _find_entry_price(text: str) -> Optional[float]:
     # the green price pill: "$1.74", "$2.41", "$0.62", "$2.95", etc.
@@ -203,9 +252,10 @@ def _find_stop(text: str) -> Optional[float]:
 
 def _extract(text: str, img_path: Path) -> Dict[str, Any]:
     now = datetime.now()
-    side = _find_side(text)
-    ticker, ticker_score = _best_ticker_candidate(text)
-    strike = _find_strike(text)
+    strike, side, anchor_pos = _find_strike_and_side(text)
+    if side is None:
+        side = _find_side(text)  # plain-text fallback, no strike+side pairing found
+    ticker, ticker_score = _best_ticker_candidate(text, anchor_pos=anchor_pos)
     entry  = _find_entry_price(text)
     # expiry from phrases like “May 24 / May 31 / Jun 7 …”
     expiry = _parse_month_day(text, year=now.year) or _parse_month_day(text, year=now.year+1)
