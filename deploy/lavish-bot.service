@@ -1,0 +1,62 @@
+# deploy/lavish-bot.service
+# systemd unit for running the bot unattended (survives SSH disconnects,
+# crashes, and reboots) - without this, "leave it running for a week" means
+# babysitting a terminal session the whole time.
+#
+# Install (see DEPLOY.md for the full walkthrough):
+#   sudo cp deploy/lavish-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now lavish-bot
+#
+# Watch it:
+#   systemctl status lavish-bot
+#   journalctl -u lavish-bot -f
+
+[Unit]
+Description=Lavish_bot - Patreon/Discord trade alert bot
+After=network-online.target
+Wants=network-online.target
+# StartLimit* is a [Unit]-section directive, not [Service] - stops
+# systemd from restart-looping forever if the problem is persistent
+# (e.g. bad credentials): 5 crashes in 10 minutes and it gives up and
+# reports the service as failed, which is the correct outcome to surface
+# loudly rather than spin on forever.
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Service]
+Type=simple
+
+# Change these two to match where you actually deployed and which user
+# should own the process - see DEPLOY.md. Running as a dedicated non-root
+# user (not root) is the right call: this process only needs to read its
+# own directory and make outbound HTTPS calls, nothing that needs root.
+User=lavish
+WorkingDirectory=/opt/lavish-bot
+
+# Belt-and-suspenders with run_ingest.py's own load_dotenv() call - this
+# makes the values visible to systemd itself too (e.g. `systemctl show`),
+# useful when debugging a misconfigured deploy without needing to shell in.
+EnvironmentFile=/opt/lavish-bot/.env
+
+# Aborts the start (and gets caught by systemd as a failed start, visible
+# in `systemctl status`) if credentials are missing, an import is broken,
+# or tesseract isn't installed - instead of launching run_ingest.py into
+# a state where it can't actually do anything.
+ExecStartPre=/opt/lavish-bot/venv/bin/python /opt/lavish-bot/system_boot.py
+ExecStart=/opt/lavish-bot/venv/bin/python /opt/lavish-bot/run_ingest.py
+
+# Crash resilience - a Python exception that somehow escapes every
+# try/except in the codebase (or an OOM kill, a segfault in a C
+# extension, etc.) restarts the process instead of leaving the bot
+# silently dead for the rest of the week.
+Restart=on-failure
+RestartSec=15
+
+# journalctl -u lavish-bot captures this regardless, but a duplicate file
+# copy is convenient for tailing/grepping without sudo.
+StandardOutput=append:/opt/lavish-bot/logs/systemd.log
+StandardError=append:/opt/lavish-bot/logs/systemd.log
+
+[Install]
+WantedBy=multi-user.target

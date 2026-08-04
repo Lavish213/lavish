@@ -1,0 +1,49 @@
+# requirements-deploy.txt
+# Minimal, accurate dependency list for the REAL live pipeline
+# (run_ingest.py and everything it actually imports) - not the full
+# requirements.txt, which also covers a large amount of unrelated/
+# orphaned ML, LLM, and scraping code (torch, transformers, langchain,
+# chromadb, easyocr, paddleocr, newspaper3k, etc.) that run_ingest.py's
+# import chain never touches. Installing all of that on a small VPS is
+# slow and needlessly fragile (torch and paddleocr in particular are
+# large, slow, and common build-failure points on constrained boxes) for
+# zero benefit to what's actually running.
+#
+# Traced by actually importing run_ingest.py fresh in a clean process and
+# recording every third-party package that loaded - not guessed from
+# reading the code. Use this file for a real deployment; requirements.txt
+# for local dev if you're also touching the orphaned ML/experimentation
+# code elsewhere in this repo.
+#
+#   pip install -r requirements-deploy.txt
+
+requests            # broker_alpaca.py, Patreon polling, Discord webhook alerts
+duckdb              # lavish_core/db/hybrid_store.py - the entire order/fill/signal audit trail
+rapidfuzz           # ticker matching in extract_signal.py
+python-dotenv       # .env loading (run_ingest.py, system_boot.py)
+
+# OCR path - lazy-imported (parse_text() alone doesn't need these), but
+# real trade-card screenshots go through parse_image()/ocr_image(), so
+# install these for real use. Also requires the tesseract SYSTEM binary,
+# not just this Python wrapper - see DEPLOY.md.
+pytesseract
+opencv-python-headless   # -headless: no GUI/X11 deps, the correct choice for a VPS
+pillow
+
+# Used by the reporting tools (track_record.py, wsb_basket.py,
+# ml/backtester.py) for historical price lookups - not imported by
+# run_ingest.py itself, but you'll want these installed to check
+# performance during the paper-trading week.
+yfinance
+pandas
+
+# ---------------------------------------------------------------------
+# Optional - only install if you're actually using the feature. Both
+# HybridStore and Discord ingestion work without these.
+# ---------------------------------------------------------------------
+# redis                    # only if REDIS_URL is set in .env
+# discord.py-self          # only if watching Discord - read
+#                          # lavish_core/discord_ingest/listener.py's module
+#                          # docstring FIRST (real ToS/account-risk decision).
+#                          # `pip uninstall discord.py` first if present -
+#                          # same import name, the two packages conflict.
