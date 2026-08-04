@@ -5,6 +5,28 @@
 # independent trades but are really one concentrated bet on mega-cap tech;
 # per-symbol risk limits (trade_agent.RiskLimits) don't catch that because
 # they only look at exposure to the *same* symbol.
+#
+# PLANNED UPGRADE (not built - noted here so it isn't lost, not started
+# because there's nothing real to build it against yet):
+# check_correlation_ok() below is a blunt bucket-count rule (max N
+# positions in a hand-maintained correlation group). A real portfolio-risk
+# library (riskfolio-lib is the concrete one identified) could replace
+# this with actual variance/CVaR-based sizing instead of a flat headcount
+# limit. Deliberately NOT wired up yet:
+#   - It needs a real covariance matrix, which needs real historical
+#     returns for whatever's actually been traded - there's no live
+#     trading history yet to compute one from meaningfully.
+#   - Pulling in riskfolio-lib (and its own numpy/scipy/cvxpy-class
+#     dependency tree) for a feature with nothing real to optimize over
+#     yet would bloat requirements-deploy.txt for no working benefit -
+#     same reasoning that drove trimming that file down in the first
+#     place.
+# Trigger to actually build this: once a few weeks of real paper-trading
+# history exist (via track_record.py) and the current bucket rule shows
+# a concrete case where it was too blunt (blocked something that wasn't
+# really concentrated risk, or missed a real concentration it doesn't
+# have a bucket for) - build it against that real evidence, not
+# speculatively now.
 from __future__ import annotations
 import os, json, logging, re
 from typing import Dict, List, Optional, Tuple
