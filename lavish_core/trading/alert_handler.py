@@ -45,9 +45,17 @@ def _is_perp_or_leveraged(text: str) -> bool:
 
 
 def _equity_action_from_text(text: str) -> Optional[str]:
+    # Word-boundary match, not substring - "w in up" would match "CALL"
+    # inside "RECALL"/"CALLBACK" and "PUT" inside "DISPUTE"/"COMPUTE"/
+    # "REPUTATION", turning ordinary commentary next to a real ticker into
+    # a false BUY/SELL classification. Optional trailing "S" so plural
+    # casual phrasing ("grabbing calls", "loading puts", "adding to my
+    # longs", "exits the position") still matches - a bare \bCALL\b would
+    # otherwise miss "CALLS" entirely (the "L"->"S" boundary doesn't
+    # exist, both are word characters).
     up = (text or "").upper()
-    has_buy = any(w in up for w in BUY_WORDS)
-    has_sell = any(w in up for w in SELL_WORDS)
+    has_buy = any(re.search(rf"\b{re.escape(w)}S?\b", up) for w in BUY_WORDS)
+    has_sell = any(re.search(rf"\b{re.escape(w)}S?\b", up) for w in SELL_WORDS)
     if has_buy and not has_sell:
         return "BUY"
     if has_sell and not has_buy:
