@@ -14,6 +14,7 @@ from lavish_core.trade.equity_exit_monitor import watch_bracket_async
 from lavish_core.trade.circuit_breaker import check_ok as circuit_breaker_check_ok, record_trade_outcome
 from lavish_core.trade.reconcile import mark_watched, unmark_watched
 from lavish_core.trade.portfolio_risk import check_correlation_ok
+from lavish_core.trade.pdt_guard import check_pdt_ok
 
 log = get_logger("trade", log_dir="logs")
 
@@ -209,6 +210,16 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         log.error("Skip options trade: %s", corr_reason)
         return
 
+    pdt_ok, pdt_reason = check_pdt_ok(store)
+    if not pdt_ok:
+        store.submit_order(
+            symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
+            limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
+            meta={"reason": pdt_reason, "source": signal.get("source", "discord"), "note": note},
+        )
+        log.error("Skip options trade: %s", pdt_reason)
+        return
+
     try:
         order = place_option_order(
             contract_symbol=contract["symbol"], side="buy", qty=qty,
@@ -390,6 +401,16 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
                 meta={"reason": corr_reason, **meta},
             )
             log.error("Skip trade: %s", corr_reason)
+            return
+
+        pdt_ok, pdt_reason = check_pdt_ok(store)
+        if not pdt_ok:
+            store.submit_order(
+                symbol=sym, side=side, qty=qty, order_type="market",
+                tif="day", venue=TRADE_MODE, status="rejected",
+                meta={"reason": pdt_reason, **meta},
+            )
+            log.error("Skip trade: %s", pdt_reason)
             return
 
     log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f, tp=%s, sl=%s, her_target=%s, her_stop=%s)",
