@@ -16,6 +16,30 @@
 # Patreon-only, same as always.
 from __future__ import annotations
 import os, threading
+from pathlib import Path
+
+# Has to happen before ANY lavish_core import, not just before use - most
+# of the modules imported below read their config (ALPACA_API_KEY,
+# TRADE_MODE, every risk/guardrail threshold) as module-level constants
+# via os.getenv(...) at import time. One module deeper in the chain
+# (patreon_refresh.py) already called load_dotenv() on its own, but by
+# the time Python reaches that import, alert_handler -> trade_handler ->
+# broker_alpaca has already been imported and already read (empty)
+# environment variables - a real .env file's values would never actually
+# reach the process. Loading here, first, guarantees every module below
+# sees the real values from the very first line it executes.
+#
+# Explicit path, not load_dotenv()'s bare default - the no-args form
+# resolves relative to wherever Python's call stack says the *caller's
+# frame* lives, not the process's working directory. That's usually the
+# same as this file's own directory in normal use, but a systemd unit
+# with a WorkingDirectory that doesn't match, or running this via a
+# symlink/wrapper, silently breaks that assumption - confirmed by testing
+# this from a different cwd than the repo root, which reproduced exactly
+# that silent-no-op failure. Anchoring to this file's own directory makes
+# it correct regardless of cwd or how the process was launched.
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 from lavish_core.logger_setup import get_logger
 from lavish_core.patreon import patreon_trigger
