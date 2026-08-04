@@ -265,6 +265,18 @@ def _find_strike_and_side(text: str) -> Tuple[Optional[float], Optional[str], Op
     m = re.search(r"\$?\s?(\d{1,4}(?:\.\d{1,2})?)\s*(?:strike\s+)?(calls?|puts?)(?:\s+strikes?)?\b", text, re.I)
     if m:
         return _to_float(m.group(1)), m.group(2).rstrip("sS").upper(), m.start()
+
+    # Reverse order: a real current alert reads "Spy Calls . $760 8/10" -
+    # side word first, price after. The gap is deliberately
+    # punctuation/whitespace ONLY (not "any character") - "puts"/"calls"
+    # are also common plain-English words ("puts down $50", "calls for
+    # $50 in fees"), and allowing letters in the gap would match those.
+    # Requiring the gap to be just ". "/", "/" - "/whitespace means this
+    # only fires on the tight "SIDE <punct> $PRICE" shape her card-style
+    # captions actually use.
+    m2 = re.search(r"\b(calls?|puts?)\b[\s.,:\-]{0,10}\$\s?(\d{1,4}(?:\.\d{1,2})?)\b", text, re.I)
+    if m2:
+        return _to_float(m2.group(2)), m2.group(1).rstrip("sS").upper(), m2.start()
     return None, None, None
 
 def _find_side(text: str) -> Optional[str]:
