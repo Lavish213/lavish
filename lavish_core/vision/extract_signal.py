@@ -282,6 +282,18 @@ def _find_strike_and_side(text: str) -> Tuple[Optional[float], Optional[str], Op
     m2 = re.search(r"\b(calls?|puts?)\b[\s.,:\-]{0,10}\$\s?(\d{1,4}(?:\.\d{1,2})?)\b", text, re.I)
     if m2:
         return _to_float(m2.group(2)), m2.group(1).rstrip("sS").upper(), m2.start()
+
+    # Last-resort fallback: bare "200c"/"200p" shorthand - standard retail
+    # options chat convention, though not something confirmed in any of
+    # her actual alerts seen this session (every real one has spelled out
+    # call/put in some form) - defensive hardening, not a fix for a
+    # confirmed bug. Deliberately GLUED (no space allowed between the
+    # number and the letter) so this doesn't fire on "5 p.m."/"10 a.m."
+    # style time references, which do match if a space is allowed.
+    m3 = re.search(r"\b(\d{1,4}(?:\.\d{1,2})?)([cp])\b", text)
+    if m3:
+        side = "CALL" if m3.group(2).lower() == "c" else "PUT"
+        return _to_float(m3.group(1)), side, m3.start()
     return None, None, None
 
 def _find_side(text: str) -> Optional[str]:
