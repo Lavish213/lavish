@@ -61,7 +61,12 @@ if not KNOWN_TICKERS:
         s.strip().upper()
         for s in os.getenv(
             "WHITELIST_TICKERS",
-            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV",
+            # Reviewed against every real alert screenshot seen this session -
+            # NFLX and AMZN were both real calls that got silently skipped
+            # because they were missing here (found while testing real
+            # alerts, not guessed); DDOG was named explicitly in her own
+            # text ("except on ddog") in a real recap post.
+            "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV,NFLX,AMZN,DDOG",
         ).split(",")
         if s.strip()
     }

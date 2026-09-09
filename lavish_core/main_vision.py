@@ -145,7 +145,9 @@ TICKER_WHITELIST = {
     s.strip().upper()
     for s in os.getenv(
         "WHITELIST_TICKERS",
-        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV",
+        # Kept in sync with extract_signal.py's KNOWN_TICKERS default - see
+        # that file's comment for why NFLX/AMZN/DDOG were added.
+        "AAPL,MSFT,AMD,NVDA,META,TSLA,SPY,QQQ,GOOGL,CRM,MSTR,MU,HOOD,ATAI,NVO,UNH,AVGO,CRWV,NFLX,AMZN,DDOG",
     ).split(",")
     if s.strip()
 }
