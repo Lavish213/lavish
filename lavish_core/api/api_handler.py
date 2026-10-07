@@ -49,15 +49,15 @@ from sqlalchemy import func, desc
 # ─────────────────────────────────────────────
 # Lavish Core imports – adjust paths if needed
 # ─────────────────────────────────────────────
-from lavish_core.hybrid_store.backend.database import (
+from lavish_core.legacy_dashboard_api.backend.database import (
     get_session,
     init_db,
 )
-from lavish_core.hybrid_store.models.position import Position
-# from lavish_core.hybrid_store.models.account import Account
-# from lavish_core.hybrid_store.models.signal import Signal
-# from lavish_core.hybrid_store.models.journal import JournalEntry
-# from lavish_core.hybrid_store.models.achievement import Achievement
+from lavish_core.legacy_dashboard_api.models.position import Position
+# from lavish_core.legacy_dashboard_api.models.account import Account
+# from lavish_core.legacy_dashboard_api.models.signal import Signal
+# from lavish_core.legacy_dashboard_api.models.journal import JournalEntry
+# from lavish_core.legacy_dashboard_api.models.achievement import Achievement
 
 # from lavish_core.vision.describe import describe_image
 # from lavish_core.ai.predictor import predict_outcome

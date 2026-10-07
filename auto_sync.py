@@ -5,7 +5,7 @@ Checks all SQLAlchemy models and ensures your PostgreSQL tables
 match the current model definitions — without losing existing data.
 """
 
-from lavish_core.hybrid_store.backend.database import engine, Base
+from lavish_core.legacy_dashboard_api.backend.database import engine, Base
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 

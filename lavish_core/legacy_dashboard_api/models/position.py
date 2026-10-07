@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.sql import func
-from lavish_core.hybrid_store.models.base import Base
+from lavish_core.legacy_dashboard_api.models.base import Base
 
 class Position(Base):
     __tablename__ = "positions"

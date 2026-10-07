@@ -60,7 +60,7 @@ except Exception:
     raise
 
 try:
-    from lavish_core.hybrid_store.backend.database import init_db
+    from lavish_core.legacy_dashboard_api.backend.database import init_db
 except Exception:
     log.exception("❌ Failed to import init_db()")
     raise

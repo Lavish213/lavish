@@ -1,5 +1,5 @@
-from lavish_core.hybrid_store.backend.database import engine, Base
-from lavish_core.hybrid_store.models.position import Position
+from lavish_core.legacy_dashboard_api.backend.database import engine, Base
+from lavish_core.legacy_dashboard_api.models.position import Position
 from sqlalchemy.orm import Session
 
 # Drop & recreate table to sync structure

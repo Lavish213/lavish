@@ -8,7 +8,7 @@ Production-safe ORM engine and session management.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from lavish_core.config.config import get_settings
-from lavish_core.hybrid_store.models.base import Base
+from lavish_core.legacy_dashboard_api.models.base import Base
 
 # ─────────────────────────────────────────────────────────────
 # 1. Load Configuration
