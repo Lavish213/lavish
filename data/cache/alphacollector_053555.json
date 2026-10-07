@@ -1,9 +1,0 @@
-{
-  "collector": "Alpha Vantage",
-  "sentiment": "negative",
-  "items": [
-    {
-      "headline": "No API key set for Alpha Vantage."
-    }
-  ]
-}

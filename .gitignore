@@ -1,25 +1,3 @@
-venv/
-__pycache__/
-*.pyc
-.DS_Storevenv/
-__pycache__/
-*.db
-*.save
-*.zip
-*.mp4
-*.png
-*.jpg
-*.h5
-*.pt
-*.onnx
-vision extras/
-*.log
-.env
-*.env
-*.key
-*.h5
-*.pt
-*.onnx
 # ENV / Keys
 .env
 .env*
@@ -27,7 +5,12 @@ vision extras/
 *.pem
 *.cert
 
-# Model Files
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Model files
 *.pt
 *.onnx
 *.h5
@@ -36,11 +19,32 @@ vision extras/
 log/
 *.log
 
-# Cache
-__pycache__/
-memory/
-vision extras/
+# Runtime/generated data - audit trails, caches, local DBs regenerate on
+# first run and don't belong in version control (see repo audit notes)
+*.db
+*.sqlite
+*.duckdb
+data/cache/
+data/ocr_cache/
+lavish_core/data/ocr_cache/
+lavish_core/vision/outputs/
+lavish_core/vision/parsed/
+lavish_core/vision/logs/
+lavish_core/patreon/logs/
+logs/
+data/storage/
 
-# Images
+# OS
+.DS_Store
+*.save
+*.zip
+*.mp4
+
+# Images (test/scratch screenshots, not source assets)
 *.jpg
 *.jpeg
+*.png
+
+# Misc stray dirs seen in this repo
+vision extras/
+memory/
