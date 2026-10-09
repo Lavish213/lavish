@@ -183,6 +183,19 @@ SCHEMA_SQL: List[str] = [
     )
     """,
 
+    # -- single-row control flags (currently just the kill switch) -
+    # durable, so a restart doesn't quietly undo a manually-triggered
+    # stop, and checkable/settable remotely over SSH without needing to
+    # touch code or redeploy (see scripts/kill_switch.py).
+    """
+    CREATE TABLE IF NOT EXISTS control_flags (
+        name        TEXT PRIMARY KEY,
+        enabled     BOOLEAN,
+        reason      TEXT,
+        updated_at  TIMESTAMP
+    )
+    """,
+
     # --- indices (no-op if exist)
     "CREATE INDEX IF NOT EXISTS idx_signals_symbol_ts ON signals(symbol, ts)",
     "CREATE INDEX IF NOT EXISTS idx_orders_symbol_ts  ON orders(symbol, ts)",
@@ -327,6 +340,26 @@ class HybridStore:
         querying per item in the hot loop."""
         rows = self.fetchall("SELECT item_id FROM ingest_seen WHERE source = ?", (source,))
         return {r[0] for r in rows}
+
+    # =========================================================================
+    # Section 5c — Kill switch (and future single-row control flags)
+    # =========================================================================
+
+    def set_kill_switch(self, enabled: bool, reason: str = "") -> None:
+        self.execute(
+            "INSERT INTO control_flags(name, enabled, reason, updated_at) VALUES ('kill_switch', ?, ?, ?) "
+            "ON CONFLICT (name) DO UPDATE SET enabled = excluded.enabled, reason = excluded.reason, "
+            "updated_at = excluded.updated_at",
+            (enabled, reason, _utcnow()),
+        )
+
+    def get_kill_switch(self) -> Tuple[bool, str]:
+        """Returns (enabled, reason). (False, "") if never set."""
+        rows = self.fetchall("SELECT enabled, reason FROM control_flags WHERE name = 'kill_switch'")
+        if not rows:
+            return False, ""
+        enabled, reason = rows[0]
+        return bool(enabled), str(reason or "")
 
     # =========================================================================
     # Section 6 — Orders / Fills / Positions

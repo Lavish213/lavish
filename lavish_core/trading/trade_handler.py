@@ -74,6 +74,21 @@ def _coerce_side(action: str) -> Optional[str]:
     if a in ("sell", "short"): return "sell"
     return None
 
+def _kill_switch_reason() -> Optional[str]:
+    """Checked first, before any other work, in both entry paths. Returns
+    a reason string if new entries are currently halted, None otherwise.
+    Remotely settable without a redeploy via scripts/kill_switch.py - see
+    that script and HybridStore.set_kill_switch(). Exits are never
+    affected, same philosophy as every other entry-only gate in this
+    file - a kill switch that could trap you IN a position would be
+    worse than no kill switch at all."""
+    store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
+    enabled, reason = store.get_kill_switch()
+    if enabled:
+        return f"kill_switch: {reason}" if reason else "kill_switch: no reason given"
+    return None
+
+
 def _price_drift_reason(alert_time_price: Optional[float], current_price: Optional[float]) -> Optional[str]:
     """Returns a rejection reason if the underlying has moved more than
     MAX_PRICE_DRIFT_SINCE_ALERT_PCT since the alert first arrived, or None
@@ -186,6 +201,11 @@ def _execute_option_trade(signal: Dict[str, Any]) -> bool:
     transient issue doesn't permanently block a legitimate retry from the
     other alert source within the dedup window.
     """
+    kill_reason = _kill_switch_reason()
+    if kill_reason:
+        log.error("Skip options trade: %s - refusing all new entries.", kill_reason)
+        return True
+
     ticker = str(signal.get("ticker") or signal.get("symbol") or "").upper().strip()
     option_side = str(signal.get("side", "")).upper().strip()
     strike = signal.get("strike")
@@ -448,6 +468,16 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> bool:
     if conf < CONF_FLOOR:
         log.info("Skip trade: confidence %.2f < floor %.2f (%s %s)", conf, CONF_FLOOR, side, sym)
         return True
+
+    # Only new entries (buy) are halted - a sell is reducing/closing
+    # exposure, same reasoning as every other entry-only gate below. A
+    # kill switch that could trap you IN a position would be worse than
+    # no kill switch at all.
+    if side == "buy":
+        kill_reason = _kill_switch_reason()
+        if kill_reason:
+            log.error("Skip trade: %s - refusing all new entries.", kill_reason)
+            return True
 
     # Open HybridStore (DuckDB/Redis) for audit + risk gates
     store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
