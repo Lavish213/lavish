@@ -41,13 +41,29 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
+import time
+
 from lavish_core.logger_setup import get_logger
 from lavish_core.patreon import patreon_trigger
 from lavish_core.discord_ingest import listener as discord_listener
 from lavish_core.trade.reconcile import reconcile_open_positions, run_periodic_reconciliation
 from lavish_core.trade.account_monitor import run_periodic_snapshot
+from lavish_core.utils import sd_notify
 
 log = get_logger("run_ingest", log_dir="logs")
+
+# Must stay well under deploy/lavish-bot.service's WatchdogSec (90s) - a
+# missed ping or two shouldn't trip a restart, only an actually-stuck
+# process should. A no-op everywhere this isn't run under systemd
+# Type=notify (see sd_notify.py) - the thread still runs, it just never
+# sends anything.
+WATCHDOG_PING_INTERVAL_SECONDS = int(os.getenv("WATCHDOG_PING_INTERVAL_SECONDS", "30"))
+
+
+def _run_watchdog_pings() -> None:
+    while True:
+        sd_notify.notify_watchdog()
+        time.sleep(WATCHDOG_PING_INTERVAL_SECONDS)
 
 
 def _log_startup_config() -> None:
@@ -99,10 +115,16 @@ def main() -> None:
         log.error("Startup reconciliation failed: %s", e)
     threading.Thread(target=run_periodic_reconciliation, name="reconcile-loop", daemon=True).start()
     threading.Thread(target=run_periodic_snapshot, name="account-snapshot-loop", daemon=True).start()
+    threading.Thread(target=_run_watchdog_pings, name="watchdog-ping-loop", daemon=True).start()
 
     patreon_thread = threading.Thread(target=patreon_trigger.poll_loop, name="patreon-poller", daemon=True)
     patreon_thread.start()
     log.info("Patreon poller started in background thread.")
+
+    # Startup is done (reconciliation ran, every background loop is
+    # alive) - tell systemd this process is actually up. A no-op unless
+    # running under Type=notify; see deploy/lavish-bot.service.
+    sd_notify.notify_ready()
 
     if discord_listener.DISCORD_USER_TOKEN and discord_listener.ACCEPT_TOS_RISK:
         log.info("Starting Discord listener on the main thread (blocking)...")

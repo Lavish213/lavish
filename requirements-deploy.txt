@@ -16,26 +16,37 @@
 # code elsewhere in this repo.
 #
 #   pip install -r requirements-deploy.txt
+#
+# Pinned to exact versions, each verified working against this repo's
+# actual test suite and live-pipeline imports (not guessed) - "latest" at
+# install time is how two deploys of the same commit end up running
+# different code underneath them. Bump deliberately (pip install
+# --upgrade <pkg>, re-run the test suite, re-pin) rather than letting
+# this drift silently.
 
-requests            # broker_alpaca.py, Patreon polling, Discord webhook alerts
-duckdb              # lavish_core/db/hybrid_store.py - the entire order/fill/signal audit trail
-rapidfuzz           # ticker matching in extract_signal.py
-python-dotenv       # .env loading (run_ingest.py, system_boot.py)
+requests==2.33.1            # broker_alpaca.py, Patreon polling, Discord webhook alerts
+duckdb==1.5.6                # lavish_core/db/hybrid_store.py - the entire order/fill/signal audit trail
+rapidfuzz==3.14.6            # ticker matching in extract_signal.py
+python-dotenv==1.2.4          # .env loading (run_ingest.py, system_boot.py)
 
 # OCR path - lazy-imported (parse_text() alone doesn't need these), but
 # real trade-card screenshots go through parse_image()/ocr_image(), so
 # install these for real use. Also requires the tesseract SYSTEM binary,
 # not just this Python wrapper - see DEPLOY.md.
-pytesseract
-opencv-python-headless   # -headless: no GUI/X11 deps, the correct choice for a VPS
-pillow
+pytesseract==0.3.13
+opencv-python-headless==5.0.0.93   # -headless: no GUI/X11 deps, the correct choice for a VPS
+pillow==12.3.0
 
 # Used by the reporting tools (track_record.py, wsb_basket.py,
 # ml/backtester.py) for historical price lookups - not imported by
 # run_ingest.py itself, but you'll want these installed to check
 # performance during the paper-trading week.
-yfinance
-pandas
+yfinance==1.7.0
+pandas==3.0.6
+
+# Needed by tests/ (pytest tests/) - not imported by run_ingest.py
+# itself, but CI and any pre-deploy check run it against this file.
+pytest==9.1.1
 
 # ---------------------------------------------------------------------
 # Optional - only install if you're actually using the feature. Both

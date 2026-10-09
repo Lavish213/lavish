@@ -21,6 +21,14 @@ DAILY_LOSS_LIMIT_PCT = float(os.getenv("DAILY_LOSS_LIMIT_PCT", "0.03"))
 WEEKLY_LOSS_LIMIT_PCT = float(os.getenv("WEEKLY_LOSS_LIMIT_PCT", "0.07"))
 MAX_CONSECUTIVE_LOSSES = int(os.getenv("MAX_CONSECUTIVE_LOSSES", "5"))
 
+# Default: a broker/account read failure BLOCKS new entries. "Can't verify
+# we're not already past a loss limit" is not the same as "we're fine" -
+# for a risk gate specifically, unverifiable must mean no, not yes. Exits
+# are never gated by this check regardless, so this can't trap you in a
+# position during an outage. Explicit opt-out for anyone who has a real
+# reason to prefer the old fail-open behavior.
+RISK_CHECK_FAIL_OPEN = os.getenv("RISK_CHECK_FAIL_OPEN", "false").strip().lower() in ("1", "true", "yes", "on")
+
 _DAY_SECONDS = 24 * 3600
 _WEEK_SECONDS = 7 * _DAY_SECONDS
 
@@ -47,17 +55,23 @@ def _get_baseline(store: HybridStore, key: str, window_seconds: float, current_e
 def check_ok(store: HybridStore) -> Tuple[bool, str]:
     """
     Call before submitting ANY new entry order (equity or options). Returns
-    (True, "ok") to proceed, or (False, reason) to block the trade.
-    Fails open (allows trading) only if the account equity read itself
-    fails - a broker outage shouldn't be indistinguishable from "we're not
-    trading right now" in the logs, so this logs loudly either way.
+    (True, "ok") to proceed, or (False, reason) to block the trade. Fails
+    CLOSED (blocks new entries) if the account equity read itself fails -
+    "can't verify we're not already past a loss limit" must mean no for a
+    risk gate, not "assume we're fine." Set RISK_CHECK_FAIL_OPEN=true to
+    restore the old fail-open behavior.
     """
     try:
         acct = get_account()
         equity = float(acct.get("equity") or 0.0)
     except Exception as e:
-        log.warning("circuit_breaker: could not read account equity (%s) - allowing trade, but this needs attention.", e)
-        return True, "ok (equity check unavailable)"
+        if RISK_CHECK_FAIL_OPEN:
+            log.warning("circuit_breaker: could not read account equity (%s) - allowing trade "
+                        "(RISK_CHECK_FAIL_OPEN=true), but this needs attention.", e)
+            return True, "ok (equity check unavailable, fail-open configured)"
+        log.error("circuit_breaker: could not read account equity (%s) - BLOCKING new entries "
+                   "until this is verifiable.", e)
+        return False, f"equity check unavailable: {e}"
 
     if equity <= 0:
         return True, "ok (no equity data)"

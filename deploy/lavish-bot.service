@@ -11,6 +11,16 @@
 # Watch it:
 #   systemctl status lavish-bot
 #   journalctl -u lavish-bot -f
+#
+# First deploy with this file: `systemctl status lavish-bot` should reach
+# "active (running)" within a few seconds, not sit in "activating" - that
+# would mean the Type=notify READY=1 never arrived (check
+# `journalctl -u lavish-bot` for why run_ingest.py didn't reach its
+# startup-complete point). The sd_notify protocol itself is verified
+# (tests/test_sd_notify.py, against a real socket) but real systemd
+# Type=notify/WatchdogSec behavior can only be confirmed by watching an
+# actual deploy - this is the one piece of this unit file that needs that
+# real-environment confirmation.
 
 [Unit]
 Description=Lavish_bot - Patreon/Discord trade alert bot
@@ -25,7 +35,16 @@ StartLimitIntervalSec=600
 StartLimitBurst=5
 
 [Service]
-Type=simple
+# notify (not simple): run_ingest.py calls sd_notify READY=1 once startup
+# actually finishes (reconciliation ran, every background thread is
+# alive) and WATCHDOG=1 every 30s after that - see
+# lavish_core/utils/sd_notify.py and WatchdogSec below. A silent hang (the
+# process is alive but every loop is stuck) now gets caught and
+# restarted; Type=simple only catches the process dying outright, not a
+# live deadlock.
+Type=notify
+NotifyAccess=main
+WatchdogSec=90
 
 # Change these two to match where you actually deployed and which user
 # should own the process - see DEPLOY.md. Running as a dedicated non-root
@@ -57,6 +76,22 @@ RestartSec=15
 # copy is convenient for tailing/grepping without sudo.
 StandardOutput=append:/opt/lavish-bot/logs/systemd.log
 StandardError=append:/opt/lavish-bot/logs/systemd.log
+
+# Sandboxing - this process only ever needs to read its own directory and
+# make outbound HTTPS calls, nothing here costs it any real capability.
+# ReadWritePaths is the one exception carved out of ProtectSystem=strict's
+# otherwise-read-only filesystem: logs/, data/ (DuckDB file + its own temp
+# dir), and vision/raw (downloaded Patreon images) all live under here.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/lavish-bot
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
 
 [Install]
 WantedBy=multi-user.target

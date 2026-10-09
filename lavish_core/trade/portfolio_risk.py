@@ -51,6 +51,11 @@ _DEFAULT_GROUPS: Dict[str, str] = {
 
 MAX_CORRELATED_POSITIONS = int(os.getenv("MAX_CORRELATED_POSITIONS", "3"))
 
+# Shared with circuit_breaker.py/pdt_guard.py - same env var, same meaning:
+# a broker read failure blocks new entries by default rather than silently
+# allowing them.
+RISK_CHECK_FAIL_OPEN = os.getenv("RISK_CHECK_FAIL_OPEN", "false").strip().lower() in ("1", "true", "yes", "on")
+
 
 def _load_groups() -> Dict[str, str]:
     raw = os.getenv("CORRELATION_GROUPS_JSON", "")
@@ -100,12 +105,16 @@ def check_correlation_ok(new_ticker: str, get_positions_fn=None) -> Tuple[bool, 
     try:
         positions = get_positions_fn() or []
     except Exception as e:
-        # Can't verify concentration if the broker call itself fails - fail
-        # open here (same posture as latest_quote's soft-fail) rather than
-        # blocking every trade because of an unrelated API hiccup. The
-        # circuit breaker and per-symbol limits still apply independently.
-        log.warning("check_correlation_ok: get_positions failed, skipping check: %s", e)
-        return True, None
+        if RISK_CHECK_FAIL_OPEN:
+            log.warning("check_correlation_ok: get_positions failed, skipping check "
+                        "(RISK_CHECK_FAIL_OPEN=true): %s", e)
+            return True, None
+        # Can't verify concentration if the broker call itself fails - "can't
+        # verify" must mean no for a risk gate, not "assume we're fine."
+        # Other independent gates (circuit breaker, PDT) still apply too.
+        log.error("check_correlation_ok: get_positions failed - BLOCKING new entries "
+                   "until this is verifiable: %s", e)
+        return False, f"correlation check unavailable: {e}"
 
     held_underlyings = set()
     for p in positions:

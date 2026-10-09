@@ -28,6 +28,11 @@ PDT_EQUITY_THRESHOLD = float(os.getenv("PDT_EQUITY_THRESHOLD", "25000"))
 PDT_MAX_DAY_TRADES = int(os.getenv("PDT_MAX_DAY_TRADES", "3"))
 PDT_LOOKBACK_BUSINESS_DAYS = int(os.getenv("PDT_LOOKBACK_BUSINESS_DAYS", "5"))
 
+# Shared with circuit_breaker.py/portfolio_risk.py - same env var, same
+# meaning in each: a broker/account read failure blocks new entries by
+# default rather than silently allowing them.
+RISK_CHECK_FAIL_OPEN = os.getenv("RISK_CHECK_FAIL_OPEN", "false").strip().lower() in ("1", "true", "yes", "on")
+
 
 def _trailing_business_days(n: int, as_of: date) -> date:
     """
@@ -72,9 +77,12 @@ def check_pdt_ok(store: HybridStore) -> Tuple[bool, str]:
     Call before submitting any NEW entry (buy) order - same posture as
     the circuit breaker and correlation gate: never blocks a sell/exit,
     since getting out of a position should always be possible regardless
-    of day-trade count. Fails open (allows the trade) if the account
-    equity read fails, or if PDT_EQUITY_THRESHOLD<=0 (explicit opt-out
-    for a cash account or an account already well above the threshold).
+    of day-trade count. Fails CLOSED (blocks new entries) if the account
+    equity read fails - "can't verify" must mean no for a risk gate, not
+    "assume we're fine." Set RISK_CHECK_FAIL_OPEN=true to restore the old
+    fail-open behavior. PDT_EQUITY_THRESHOLD<=0 remains an explicit,
+    deliberate opt-out (cash account, or an account already well above
+    the threshold) - that's a configuration choice, not an error state.
     """
     if PDT_EQUITY_THRESHOLD <= 0:
         return True, "ok (PDT check disabled via PDT_EQUITY_THRESHOLD<=0)"
@@ -83,8 +91,13 @@ def check_pdt_ok(store: HybridStore) -> Tuple[bool, str]:
         acct = get_account()
         equity = float(acct.get("equity") or 0.0)
     except Exception as e:
-        log.warning("pdt_guard: could not read account equity (%s) - allowing trade, but this needs attention.", e)
-        return True, "ok (equity check unavailable)"
+        if RISK_CHECK_FAIL_OPEN:
+            log.warning("pdt_guard: could not read account equity (%s) - allowing trade "
+                        "(RISK_CHECK_FAIL_OPEN=true), but this needs attention.", e)
+            return True, "ok (equity check unavailable, fail-open configured)"
+        log.error("pdt_guard: could not read account equity (%s) - BLOCKING new entries "
+                   "until this is verifiable.", e)
+        return False, f"equity check unavailable: {e}"
 
     if equity <= 0 or equity >= PDT_EQUITY_THRESHOLD:
         return True, "ok"

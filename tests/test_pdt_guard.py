@@ -88,7 +88,17 @@ def test_large_account_bypasses_check(store):
     assert ok is True
 
 
-def test_broker_error_fails_open(store):
+def test_broker_error_fails_closed_by_default(store):
+    # Changed from fail-open: "can't verify we're not past a day-trade
+    # limit" must mean no for a risk gate, not "assume we're fine."
+    with patch.object(pdt_guard, "get_account", side_effect=RuntimeError("broker down")):
+        ok, reason = pdt_guard.check_pdt_ok(store)
+    assert ok is False
+    assert "unavailable" in reason
+
+
+def test_broker_error_fails_open_with_explicit_opt_out(store, monkeypatch):
+    monkeypatch.setattr(pdt_guard, "RISK_CHECK_FAIL_OPEN", True)
     with patch.object(pdt_guard, "get_account", side_effect=RuntimeError("broker down")):
         ok, reason = pdt_guard.check_pdt_ok(store)
     assert ok is True
