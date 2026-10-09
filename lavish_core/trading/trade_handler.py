@@ -57,10 +57,36 @@ OPTION_STRIKE_TOLERANCE = float(os.getenv("OPTION_STRIKE_TOLERANCE", "5"))
 # again on the other source within this window.
 SIGNAL_DEDUP_WINDOW_SECONDS = float(os.getenv("SIGNAL_DEDUP_WINDOW_SECONDS", "300"))
 
+# Reject a trade if the underlying has already moved more than this much
+# since the moment the alert was first seen - the reference price is
+# captured once, as early as possible (execute_trade_from_post, before
+# dedup/parsing/risk checks run), and compared against a fresh quote at
+# the actual moment of execution. A late-processed alert (the bot was
+# slow, or is catching up after downtime) shouldn't trade at a price
+# meaningfully different from what she actually saw when she posted it -
+# that's not "copying her call" anymore, it's a different trade that
+# happens to share a ticker. 0 disables the check.
+MAX_PRICE_DRIFT_SINCE_ALERT_PCT = float(os.getenv("MAX_PRICE_DRIFT_SINCE_ALERT_PCT", "0.03"))
+
 def _coerce_side(action: str) -> Optional[str]:
     a = (action or "").strip().lower()
     if a in ("buy", "long"): return "buy"
     if a in ("sell", "short"): return "sell"
+    return None
+
+def _price_drift_reason(alert_time_price: Optional[float], current_price: Optional[float]) -> Optional[str]:
+    """Returns a rejection reason if the underlying has moved more than
+    MAX_PRICE_DRIFT_SINCE_ALERT_PCT since the alert first arrived, or None
+    if the move is within tolerance (or either price is unknown - this
+    gate only fires when it can actually compare two real numbers)."""
+    if MAX_PRICE_DRIFT_SINCE_ALERT_PCT <= 0:
+        return None
+    if not alert_time_price or not current_price or alert_time_price <= 0:
+        return None
+    drift = abs(current_price - alert_time_price) / alert_time_price
+    if drift > MAX_PRICE_DRIFT_SINCE_ALERT_PCT:
+        return (f"price_drift: underlying moved {drift:.1%} since the alert arrived "
+                f"(${alert_time_price:.2f} -> ${current_price:.2f}), limit {MAX_PRICE_DRIFT_SINCE_ALERT_PCT:.1%}")
     return None
 
 def _find_duplicate_signal(
@@ -104,6 +130,17 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
     symbol = str(signal.get("ticker") or signal.get("symbol") or "").upper().strip()
     dedup_side = str(signal.get("side") or signal.get("action") or "").lower().strip()
     source = signal.get("source", "unknown")
+
+    # Captured here - the earliest point in the whole pipeline, before
+    # dedup/parsing/risk checks run - so the price-drift-since-alert gate
+    # (MAX_PRICE_DRIFT_SINCE_ALERT_PCT) compares against what the
+    # underlying actually was when this alert first arrived, not a quote
+    # fetched moments later after real processing time has passed.
+    if symbol and "_alert_time_price" not in signal:
+        try:
+            signal["_alert_time_price"] = latest_quote(symbol)
+        except Exception:
+            signal["_alert_time_price"] = None
 
     store = None
     strike = expiry = None
@@ -187,6 +224,25 @@ def _execute_option_trade(signal: Dict[str, Any]) -> bool:
         log.warning("Skip options trade: no usable quote for %s (may be transient - not recording as seen).",
                     contract.get("symbol"))
         return False
+
+    # Price-drift-since-alert, against the underlying (what she actually
+    # called), not the option premium itself (which moves on its own
+    # schedule - gamma/theta - independent of pure underlying drift).
+    if TRADE_MODE in ("paper", "live"):
+        try:
+            underlying_now = latest_quote(ticker)
+        except Exception:
+            underlying_now = None
+        drift_reason = _price_drift_reason(signal.get("_alert_time_price"), underlying_now)
+        if drift_reason:
+            store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
+            store.submit_order(
+                symbol=contract["symbol"], side="buy", qty=0, order_type="limit",
+                limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
+                meta={"reason": drift_reason, "source": signal.get("source", "discord"), "note": note},
+            )
+            log.warning("Skip options trade: %s", drift_reason)
+            return True
 
     # Thin/illiquid contracts can quote a "mid" that isn't actually
     # tradeable - a real example seen this session was a contract with
@@ -419,6 +475,20 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> bool:
                       "(not recording as seen - may be retried).", sym)
             return False
         ref_price = _dry_price(sym)  # dry mode only - no real order will be submitted
+
+    # Price-drift-since-alert: only gates new entries (a sell is reducing/
+    # closing exposure, same reasoning as every other entry-only gate
+    # below) - getting out of a position should never be blocked by how
+    # much the underlying has moved.
+    if side == "buy" and TRADE_MODE in ("paper", "live"):
+        drift_reason = _price_drift_reason(signal.get("_alert_time_price"), ref_price)
+        if drift_reason:
+            store.submit_order(
+                symbol=sym, side=side, qty=0, order_type="market", tif="day", venue=TRADE_MODE,
+                status="rejected", meta={"reason": drift_reason, "source": signal.get("source", "patreon"), "note": note},
+            )
+            log.warning("Skip trade: %s", drift_reason)
+            return True
 
     dollars = (float(amt) if amt is not None else float(os.getenv("DEFAULT_TRADE_DOLLARS", "500"))) * POSITION_SIZE_SCALE
     qty = max(1.0, round(dollars / max(0.01, ref_price), 0))
