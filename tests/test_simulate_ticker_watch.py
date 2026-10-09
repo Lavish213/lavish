@@ -5,29 +5,59 @@
 from __future__ import annotations
 
 import random
+import re
 import sys
 from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from simulate_ticker_watch import TOP_TICKERS, generate_synthetic_alerts, classify_and_route
+from simulate_ticker_watch import (
+    TOP_TICKERS, FALLBACK_REFERENCE_PRICES, generate_synthetic_alerts, classify_and_route,
+)
+
+# All offline-mode tests pass price_lookups={ticker: None} explicitly to
+# force the static-fallback path - deterministic, no network dependency,
+# and exactly what this sandbox actually runs under.
+_NO_NETWORK = {t: None for t in TOP_TICKERS}
 
 
 def test_generation_is_reproducible_given_same_seed():
     end = date(2026, 10, 9)
     start = end - timedelta(days=365)
-    a = generate_synthetic_alerts(TOP_TICKERS, start, end, 5, random.Random(7))
-    b = generate_synthetic_alerts(TOP_TICKERS, start, end, 5, random.Random(7))
+    a = generate_synthetic_alerts(TOP_TICKERS, start, end, 5, random.Random(7), price_lookups=_NO_NETWORK)
+    b = generate_synthetic_alerts(TOP_TICKERS, start, end, 5, random.Random(7), price_lookups=_NO_NETWORK)
     assert [(x.ticker, x.date, x.text) for x in a] == [(x.ticker, x.date, x.text) for x in b]
 
 
 def test_generation_covers_every_ticker():
     end = date(2026, 10, 9)
     start = end - timedelta(days=365)
-    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, 3, random.Random(1))
+    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, 3, random.Random(1), price_lookups=_NO_NETWORK)
     seen = {a.ticker for a in alerts}
     assert seen == set(TOP_TICKERS)
+
+
+def test_options_strikes_are_anchored_near_reference_price():
+    # Regression test for the bug found via a real GitHub Actions run:
+    # strikes used to be a flat rng.uniform(50, 600) draw unrelated to the
+    # ticker's real price, producing nonsense like a $599 call on AAPL
+    # near $250 - which collapsed every Black-Scholes estimate to a
+    # meaningless -100%. Strikes must now land within the documented
+    # +/-10% (rounded to the nearest $5) band of the reference price.
+    end = date(2026, 10, 9)
+    start = end - timedelta(days=365)
+    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, 15, random.Random(3), price_lookups=_NO_NETWORK)
+    options_alerts = [a for a in alerts if a.designed_kind == "options"]
+    assert options_alerts, "expected at least one options alert in this sample"
+    for a in options_alerts:
+        ref = FALLBACK_REFERENCE_PRICES[a.ticker]
+        strikes = [int(s) for s in re.findall(r"\$?(\d+)[cp]?\b", a.text) if s.isdigit()]
+        assert strikes, f"no strike-looking number found in: {a.text!r}"
+        strike = strikes[0]
+        assert 0.85 * ref <= strike <= 1.15 * ref, (
+            f"{a.ticker} strike {strike} not within 15% of reference ${ref}: {a.text!r}"
+        )
 
 
 def test_classify_and_route_recognizes_clear_options_alert():

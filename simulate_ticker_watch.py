@@ -53,12 +53,26 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lavish_core.vision.extract_signal import parse_text
 from lavish_core.trading.alert_handler import _is_perp_or_leveraged, _equity_action_from_text
 from lavish_core.trading.trade_handler import CONF_FLOOR
-from ml.backtester import BacktestSignal, run_backtest, print_report
+from ml.backtester import BacktestSignal, run_backtest, print_report, fetch_price_history
 from lavish_core.reporting.option_estimator import estimate_option_pnl, print_estimate
 
 # The real top-10 most-traded/most-watched mega-cap + index tickers - all
 # already on the live WHITELIST_TICKERS (env.example), not invented names.
 TOP_TICKERS = ["SPY", "QQQ", "AAPL", "MSFT", "NVDA", "TSLA", "AMD", "META", "AMZN", "GOOGL"]
+
+# Used only when real price history can't be fetched (e.g. this sandbox,
+# confirmed network-blocked from Yahoo Finance) - keeps synthetic strikes
+# in a plausible ballpark instead of crashing or falling back to a flat
+# $50-600 random range (the bug this table fixes: that range produced
+# strikes wildly unrelated to a ticker's real price - e.g. a $599 call on
+# AAPL trading near $250 - which collapsed every Black-Scholes estimate
+# to a meaningless -100%). Rough centers as of this project, not exact;
+# real price history (fetched once per ticker below) always wins when
+# network access allows it.
+FALLBACK_REFERENCE_PRICES = {
+    "SPY": 670, "QQQ": 610, "AAPL": 250, "MSFT": 480, "NVDA": 180,
+    "TSLA": 420, "AMD": 220, "META": 650, "AMZN": 240, "GOOGL": 280,
+}
 
 EQUITY_BUY_TEMPLATES = [
     "BUY {t} now, breaking out",
@@ -97,8 +111,32 @@ class SyntheticAlert:
     designed_kind: str  # "equity_buy" | "equity_sell" | "options" | "ambiguous"
 
 
+def _build_price_lookups(tickers: list[str], start: date, end: date) -> dict:
+    """One fetch per ticker, reused for every alert on that ticker - not
+    one fetch per alert. Returns {ticker: price_history_df_or_None}."""
+    out = {}
+    for t in tickers:
+        out[t] = fetch_price_history(t, start, end)
+    return out
+
+
+def _reference_price(ticker: str, d: date, price_lookups: dict) -> float:
+    """Real Close nearest-at-or-before d if we have history for this
+    ticker; otherwise the static fallback. Never raises, never returns a
+    strike-breaking None - that's the whole point of this helper."""
+    hist = price_lookups.get(ticker)
+    if hist is not None:
+        rows = hist.loc[hist.index <= d]
+        if not rows.empty:
+            return float(rows.iloc[-1]["Close"])
+    return float(FALLBACK_REFERENCE_PRICES.get(ticker, 200))
+
+
 def generate_synthetic_alerts(tickers: list[str], start: date, end: date,
-                               alerts_per_ticker: int, rng: random.Random) -> list[SyntheticAlert]:
+                               alerts_per_ticker: int, rng: random.Random,
+                               price_lookups: Optional[dict] = None) -> list[SyntheticAlert]:
+    if price_lookups is None:
+        price_lookups = _build_price_lookups(tickers, start, end)
     out: list[SyntheticAlert] = []
     span_days = (end - start).days
     for t in tickers:
@@ -113,7 +151,13 @@ def generate_synthetic_alerts(tickers: list[str], start: date, end: date,
             elif kind == "equity_sell":
                 text = rng.choice(EQUITY_SELL_TEMPLATES).format(t=t)
             elif kind == "options":
-                strike = round(rng.uniform(50, 600), 0)
+                # Strike anchored to the real (or fallback) reference
+                # price at this date, within +/-10% - a near-the-money
+                # weekly call/put, the shape her real alerts actually
+                # take, not a flat $50-600 draw unrelated to the ticker.
+                ref_price = _reference_price(t, d, price_lookups)
+                strike = round(ref_price * rng.uniform(0.90, 1.10) / 5) * 5
+                strike = max(5, strike)
                 side_word = rng.choice(["calls", "puts"])
                 side_letter = "c" if side_word == "calls" else "p"
                 exp = _next_weekday_friday(d)
@@ -167,7 +211,19 @@ def main() -> None:
     end = date.today()
     start = end - timedelta(days=args.days)
 
-    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, args.alerts_per_ticker, rng)
+    price_lookups = _build_price_lookups(TOP_TICKERS, start, end)
+    real_price_tickers = [t for t in TOP_TICKERS if price_lookups.get(t) is not None]
+    if real_price_tickers:
+        print(f"Strike anchoring: real price history available for {len(real_price_tickers)}/{len(TOP_TICKERS)} "
+              f"tickers ({', '.join(real_price_tickers)}).")
+    missing = [t for t in TOP_TICKERS if t not in real_price_tickers]
+    if missing:
+        print(f"Strike anchoring: NO price history for {', '.join(missing)} - using static fallback reference "
+              f"prices for strike generation (no network access, or fetch failed).")
+    print()
+
+    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, args.alerts_per_ticker, rng,
+                                        price_lookups=price_lookups)
     print(f"=== Generated {len(alerts)} synthetic alerts across {len(TOP_TICKERS)} tickers "
           f"({start} to {end}) ===\n")
 
