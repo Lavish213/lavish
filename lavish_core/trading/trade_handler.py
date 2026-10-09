@@ -265,7 +265,13 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         client_id=order.get("client_order_id"),
         meta={"broker": "alpaca", "raw": order, "source": signal.get("source", "discord"), "note": note,
               "ticker": ticker, "option_side": option_side, "strike": float(strike), "expiry": expiry.isoformat(),
-              "expected_price": mid_price, "filled_avg_price": filled_avg_price},
+              "expected_price": mid_price, "filled_avg_price": filled_avg_price,
+              # Her original stated levels - reconcile.py reads these back
+              # on crash recovery so a recovered position runs on what she
+              # actually called instead of silently falling back to our
+              # generic defaults (previously lost entirely on any restart).
+              "target_underlying": float(target_hint) if target_hint is not None else None,
+              "stop_underlying": float(stop_hint) if stop_hint is not None else None},
     )
 
     if final_status not in ("filled", "partially_filled"):

@@ -8,17 +8,18 @@
 # it doesn't auto-cancel/flatten on client disconnect), so this has to be
 # handled here: on startup, and periodically thereafter, find any open
 # option position that isn't being watched and start a guardrail monitor
-# for it using our own default rules (her original stated target/stop
-# isn't persisted anywhere, so a recovered position runs on our
-# guardrails only - which is the whole point of having them).
+# for it - using her original stated target/stop when we can recover it
+# (persisted in the entry order's meta - see trade_handler.py), falling
+# back to our own defaults only when that lookup comes up empty.
 from __future__ import annotations
-import os, re, time, threading, logging
+import json, os, re, time, threading, logging
 from datetime import date, datetime
-from typing import Optional, Dict, Any, Set
+from typing import Optional, Dict, Any, Set, Tuple
 
 from lavish_core.trade.broker_alpaca import get_positions
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
 from lavish_core.utils.alerts import post_discord
+from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 
 log = logging.getLogger("reconcile")
 
@@ -61,6 +62,33 @@ def parse_occ_symbol(symbol: str) -> Optional[Dict[str, Any]]:
     }
 
 
+def _find_original_target_stop(contract_symbol: str) -> Tuple[Optional[float], Optional[float]]:
+    """
+    Looks up the most recent 'buy' order for this contract to recover her
+    original stated target/stop (persisted in its meta by trade_handler.py).
+    Returns (None, None) on any lookup failure or if the order predates
+    this field being persisted - callers must treat that the same as
+    "she didn't give one", not as an error.
+    """
+    try:
+        store = HybridStore(duckdb_path=str(DEFAULT_DB))
+        rows = store.fetchall(
+            "SELECT meta FROM orders WHERE symbol = ? AND side = 'buy' ORDER BY ts DESC LIMIT 1",
+            (contract_symbol,),
+        )
+        if not rows:
+            return None, None
+        meta_raw = rows[0][0]
+        meta = json.loads(meta_raw) if isinstance(meta_raw, str) else (meta_raw or {})
+        target = meta.get("target_underlying")
+        stop = meta.get("stop_underlying")
+        return (float(target) if target is not None else None,
+                float(stop) if stop is not None else None)
+    except Exception as e:
+        log.warning("reconcile: could not recover original target/stop for %s: %s", contract_symbol, e)
+        return None, None
+
+
 def reconcile_open_positions() -> int:
     """
     Finds open long option positions with no active monitor in this
@@ -101,16 +129,25 @@ def reconcile_open_positions() -> int:
         if entry_price <= 0 or qty <= 0:
             continue
 
+        target_underlying, stop_underlying = _find_original_target_stop(symbol)
+        recovered_her_levels = target_underlying is not None or stop_underlying is not None
+
         log.warning(
             "reconcile: found unmanaged open position %s (%s x%s, entry=%.2f, exp=%s) - "
-            "starting a guardrail monitor with our own defaults (no original target/stop to recover).",
+            "starting a guardrail monitor (%s).",
             symbol, parsed["side"], qty, entry_price, parsed["expiry"],
+            f"recovered her target={target_underlying} stop={stop_underlying}" if recovered_her_levels
+            else "no original target/stop found - our defaults only",
         )
         post_discord(
             f"⚠️ Recovered an unmanaged options position on startup/reconcile: "
             f"{parsed['ticker']} {parsed['side']} ${parsed['strike']:.2f} exp {parsed['expiry']} "
-            f"(qty={qty}, entry={entry_price:.2f}). No original stop/target from her was persisted - "
-            f"running our own stop-loss/trailing/expiry guardrails on it now."
+            f"(qty={qty}, entry={entry_price:.2f}). " +
+            (f"Recovered her stated target={target_underlying} stop={stop_underlying} from the order log - "
+             f"watching those plus our own guardrails."
+             if recovered_her_levels else
+             "No original stop/target from her was found in the order log - "
+             "running our own stop-loss/trailing/expiry guardrails on it now.")
         )
 
         mark_watched(symbol)
@@ -127,8 +164,8 @@ def reconcile_open_positions() -> int:
             option_side=parsed["side"],
             entry_price=entry_price,
             expiry=parsed["expiry"],
-            target_underlying=None,
-            stop_underlying=None,
+            target_underlying=target_underlying,
+            stop_underlying=stop_underlying,
             on_exit=_on_exit,
         )
         recovered += 1
