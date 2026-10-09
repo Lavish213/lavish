@@ -92,6 +92,25 @@ def get_order(order_id: str) -> Dict[str, Any]:
         raise RuntimeError(f"Alpaca get_order error {r.status_code}: {r.text}")
     return r.json()
 
+def get_order_by_client_id(client_order_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Looks up an order by its client_order_id - how a failed POST gets
+    resolved safely instead of blindly resubmitted: if the first attempt's
+    response was lost (timeout, connection reset) but the order actually
+    reached Alpaca, this finds it. Returns None only if no order with this
+    client_order_id exists yet, meaning the original submission genuinely
+    never went through and a fresh attempt is safe.
+    """
+    _check_keys()
+    r = SESSION.get(f"{BASE_URL}/v2/orders:by_client_order_id",
+                     headers=HEADERS, params={"client_order_id": client_order_id}, timeout=15)
+    if r.status_code == 404:
+        return None
+    if r.status_code != 200:
+        raise RuntimeError(f"Alpaca get_order_by_client_id error {r.status_code}: {r.text}")
+    return r.json()
+
+
 def cancel_order(order_id: str) -> bool:
     """
     Cancels a resting (not-yet-filled) order. Used when a submitted order

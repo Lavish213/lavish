@@ -171,6 +171,18 @@ SCHEMA_SQL: List[str] = [
         cumulative_pl DOUBLE
     )
     """,
+    # -- durable "already processed" cursor for alert ingestion sources
+    # (Patreon posts, Discord messages, ...) - an in-memory-only set used
+    # to reset on every restart, replaying recent posts as if new.
+    """
+    CREATE TABLE IF NOT EXISTS ingest_seen (
+        source     TEXT,
+        item_id    TEXT,
+        seen_at    TIMESTAMP,
+        PRIMARY KEY (source, item_id)
+    )
+    """,
+
     # --- indices (no-op if exist)
     "CREATE INDEX IF NOT EXISTS idx_signals_symbol_ts ON signals(symbol, ts)",
     "CREATE INDEX IF NOT EXISTS idx_orders_symbol_ts  ON orders(symbol, ts)",
@@ -296,6 +308,25 @@ class HybridStore:
             (sid, _utcnow(), symbol.upper(), side.lower(), source, float(confidence), _json(payload or {})),
         )
         return sid
+
+    # =========================================================================
+    # Section 5b — Ingest cursor (durable "already seen" for alert sources)
+    # =========================================================================
+
+    def mark_ingest_seen(self, source: str, item_id: str) -> None:
+        """Idempotent - safe to call even if already marked (e.g. a retry)."""
+        self.execute(
+            "INSERT INTO ingest_seen(source, item_id, seen_at) VALUES (?, ?, ?) "
+            "ON CONFLICT (source, item_id) DO NOTHING",
+            (source, str(item_id), _utcnow()),
+        )
+
+    def get_all_ingest_seen(self, source: str) -> set:
+        """Bulk-loads every item_id ever marked seen for this source, so a
+        poll loop can seed its in-memory set once at startup instead of
+        querying per item in the hot loop."""
+        rows = self.fetchall("SELECT item_id FROM ingest_seen WHERE source = ?", (source,))
+        return {r[0] for r in rows}
 
     # =========================================================================
     # Section 6 — Orders / Fills / Positions

@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional
 from lavish_core.logger_setup import get_logger
 from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 from lavish_core.trade.trade_agent import place_trade, _dry_price  # dry-run fallback pricing only
-from lavish_core.trade.broker_alpaca import latest_quote, get_order as broker_get_order, cancel_order as broker_cancel_order
+from lavish_core.trade.broker_alpaca import latest_quote, get_order as broker_get_order, cancel_order as broker_cancel_order, get_position as broker_get_position
 from lavish_core.trade.options_broker import resolve_and_price_contract, place_option_order
 from lavish_core.trade.options_exit_monitor import watch_and_exit_async
 from lavish_core.trade.equity_exit_monitor import watch_bracket_async
@@ -105,6 +105,8 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
     dedup_side = str(signal.get("side") or signal.get("action") or "").lower().strip()
     source = signal.get("source", "unknown")
 
+    store = None
+    strike = expiry = None
     if symbol and dedup_side:
         store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
         strike = float(signal["strike"]) if is_option else None
@@ -114,18 +116,39 @@ def execute_trade_from_post(signal: Dict[str, Any]) -> None:
             log.info("Skip %s %s: duplicate of %s's alert within %.0fs (source=%s)",
                       dedup_side.upper(), symbol, dup_source, SIGNAL_DEDUP_WINDOW_SECONDS, source)
             return
+
+    # Recorded AFTER dispatch, not before - a transient technical failure
+    # (quote fetch, broker error) must not permanently occupy this alert's
+    # dedup slot for SIGNAL_DEDUP_WINDOW_SECONDS. Only a signal that
+    # reached a real, final outcome (traded, or deliberately skipped for a
+    # business reason) is recorded; the other source gets a genuine chance
+    # at a retry if this one failed for a technical reason.
+    try:
+        if is_option:
+            handled = _execute_option_trade(signal)
+        else:
+            handled = _execute_equity_trade(signal)
+    except Exception as e:
+        log.error("Unhandled error executing %s %s: %s (not recording as seen - may be retried)",
+                   dedup_side.upper() if dedup_side else "?", symbol, e)
+        handled = False
+
+    if store is not None and handled:
         store.log_signal(
             symbol=symbol, side=dedup_side, source=source,
             confidence=float(signal.get("confidence", 0) or 0),
             payload={"strike": strike, "expiry": expiry, "note": signal.get("note", "")},
         )
 
-    if is_option:
-        _execute_option_trade(signal)
-    else:
-        _execute_equity_trade(signal)
-
-def _execute_option_trade(signal: Dict[str, Any]) -> None:
+def _execute_option_trade(signal: Dict[str, Any]) -> bool:
+    """
+    Returns True once this signal has reached a final, deterministic
+    outcome (traded, or deliberately skipped for a business reason) - the
+    caller records it as seen for dedup purposes. Returns False for a
+    retryable technical failure (quote/contract lookup, broker error) so a
+    transient issue doesn't permanently block a legitimate retry from the
+    other alert source within the dedup window.
+    """
     ticker = str(signal.get("ticker") or signal.get("symbol") or "").upper().strip()
     option_side = str(signal.get("side", "")).upper().strip()
     strike = signal.get("strike")
@@ -138,30 +161,32 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
 
     if not ticker or not strike or not expiry_raw:
         log.info("Skip options trade: missing ticker/strike/expiry in %s", signal)
-        return
+        return True
     if conf < CONF_FLOOR:
         log.info("Skip options trade: confidence %.2f < floor %.2f (%s %s %s)",
                   conf, CONF_FLOOR, ticker, option_side, strike)
-        return
+        return True
 
     try:
         expiry = expiry_raw if isinstance(expiry_raw, date) else datetime.fromisoformat(str(expiry_raw)).date()
     except Exception as e:
         log.warning("Skip options trade: unparseable expiry %r: %s", expiry_raw, e)
-        return
+        return True
 
     contract = resolve_and_price_contract(
         ticker, expiry, option_side, float(strike), strike_tolerance=OPTION_STRIKE_TOLERANCE,
     )
     if not contract:
-        log.warning("Skip options trade: no listed contract found near %s %s $%.2f exp %s",
+        log.warning("Skip options trade: no listed contract found near %s %s $%.2f exp %s "
+                     "(may be transient - not recording as seen).",
                      ticker, option_side, float(strike), expiry)
-        return
+        return False
 
     mid_price = contract.get("mid_price")
     if not mid_price or mid_price <= 0:
-        log.warning("Skip options trade: no usable quote for %s", contract.get("symbol"))
-        return
+        log.warning("Skip options trade: no usable quote for %s (may be transient - not recording as seen).",
+                    contract.get("symbol"))
+        return False
 
     # Thin/illiquid contracts can quote a "mid" that isn't actually
     # tradeable - a real example seen this session was a contract with
@@ -175,10 +200,17 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         if spread_pct > OPTION_MAX_SPREAD_PCT:
             log.warning("Skip options trade: %s spread too wide (bid=%.2f ask=%.2f mid=%.2f, %.0f%% > %.0f%% max)",
                         contract["symbol"], bid, ask, mid_price, spread_pct * 100, OPTION_MAX_SPREAD_PCT * 100)
-            return
+            return True
 
     dollars = (float(amt) if amt is not None else DEFAULT_OPTION_TRADE_DOLLARS) * POSITION_SIZE_SCALE
-    qty = max(1, int(dollars // (mid_price * 100)))
+    qty = int(dollars // (mid_price * 100))
+    if qty < 1:
+        # max(1, ...) used to force a purchase here regardless of cost -
+        # a contract priced above the configured budget still bought 1,
+        # no matter how far over. The budget is supposed to be a cap.
+        log.warning("Skip options trade: %s costs $%.2f/contract, budget is only $%.2f - can't afford 1 contract.",
+                    contract["symbol"], mid_price * 100, dollars)
+        return True
 
     log.info("🔔 options signal → %s %s $%.2f exp %s (contract=%s qty=%s mid=%.2f mode=%s target=%s stop=%s)",
               option_side, ticker, float(strike), expiry, contract["symbol"], qty, mid_price,
@@ -186,7 +218,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
 
     if TRADE_MODE not in ("paper", "live"):
         log.info("dry mode: would BUY %s x%s @ ~%.2f (no order submitted)", contract["symbol"], qty, mid_price)
-        return
+        return True
 
     store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
 
@@ -198,7 +230,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
             meta={"reason": f"circuit_breaker: {cb_reason}", "source": signal.get("source", "discord"), "note": note},
         )
         log.error("Skip options trade: circuit_breaker: %s", cb_reason)
-        return
+        return True
 
     corr_ok, corr_reason = check_correlation_ok(ticker)
     if not corr_ok:
@@ -208,7 +240,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
             meta={"reason": corr_reason, "source": signal.get("source", "discord"), "note": note},
         )
         log.error("Skip options trade: %s", corr_reason)
-        return
+        return True
 
     pdt_ok, pdt_reason = check_pdt_ok(store)
     if not pdt_ok:
@@ -218,7 +250,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
             meta={"reason": pdt_reason, "source": signal.get("source", "discord"), "note": note},
         )
         log.error("Skip options trade: %s", pdt_reason)
-        return
+        return True
 
     try:
         order = place_option_order(
@@ -226,13 +258,13 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
             order_type="limit", limit_price=mid_price,
         )
     except Exception as e:
-        log.error("Options order failed for %s: %s", contract["symbol"], e)
+        log.error("Options order failed for %s: %s (not recording as seen - may be retried)", contract["symbol"], e)
         store.submit_order(
             symbol=contract["symbol"], side="buy", qty=qty, order_type="limit",
             limit_price=mid_price, tif="day", venue=TRADE_MODE, status="rejected",
             meta={"reason": str(e), "source": signal.get("source", "discord"), "note": note},
         )
-        return
+        return False
 
     log.info("Options order result: %s", order)
 
@@ -282,7 +314,7 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
                 broker_cancel_order(broker_oid)
             except Exception as e:
                 log.warning("Cancel of unfilled options order %s failed: %s", broker_oid, e)
-        return
+        return False
 
     # Use the real fill price (slippage vs. the mid_price we sized/quoted
     # against) for both the exit-monitor's entry baseline and P&L, not the
@@ -331,12 +363,20 @@ def _execute_option_trade(signal: Dict[str, Any]) -> None:
         stop_underlying=float(stop_hint) if stop_hint is not None else None,
         on_exit=_on_exit,
     )
+    return True
 
-def _execute_equity_trade(signal: Dict[str, Any]) -> None:
+def _execute_equity_trade(signal: Dict[str, Any]) -> bool:
     """
     Expected signal fields:
       { source, action('BUY'|'SELL'|etc), symbol, confidence(0..1),
         amount_usd(optional), note(optional) }
+
+    Returns True once this signal has reached a final, deterministic
+    outcome (traded, or deliberately skipped for a business reason) - the
+    caller records it as seen for dedup purposes. Returns False for a
+    retryable technical failure (quote lookup, position check, broker
+    error) so a transient issue doesn't permanently block a legitimate
+    retry from the other alert source within the dedup window.
     """
     sym   = str(signal.get("symbol", "")).upper().strip()
     side  = _coerce_side(str(signal.get("action", "")))
@@ -348,26 +388,72 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
 
     if not sym or not side:
         log.info("Skip trade: missing symbol/side in %s", signal)
-        return
+        return True
     if conf < CONF_FLOOR:
         log.info("Skip trade: confidence %.2f < floor %.2f (%s %s)", conf, CONF_FLOOR, side, sym)
-        return
+        return True
 
     # Open HybridStore (DuckDB/Redis) for audit + risk gates
     store = HybridStore(duckdb_path=str(DEFAULT_DB), redis_url=os.environ.get("REDIS_URL") or None)
 
-    # Size: if amount_usd provided → qty = amount / ref_price; else default $500 block
-    # Use a real market quote when we have broker creds; a hash-based dummy
-    # price would size real orders against a number unrelated to the market.
+    # Size: if amount_usd provided → qty = amount / ref_price; else default $500 block.
+    # In paper/live mode a missing real quote must fail closed - _dry_price()
+    # is a deterministic pseudo-price (hash of the ticker string) with no
+    # connection to the market; sizing and bracket levels computed from it
+    # would be real orders built on a fabricated number. Only dry mode (no
+    # real order submitted regardless) may fall back to it.
+    ref_price = None
     try:
-        ref_price = latest_quote(sym) or _dry_price(sym)
+        ref_price = latest_quote(sym)
     except Exception as e:
-        log.warning("latest_quote failed for %s, falling back to dry price: %s", sym, e)
-        ref_price = _dry_price(sym)
+        log.warning("latest_quote failed for %s: %s", sym, e)
+
+    if not ref_price or ref_price <= 0:
+        if TRADE_MODE in ("paper", "live"):
+            store.submit_order(
+                symbol=sym, side=side, qty=0, order_type="market", tif="day", venue=TRADE_MODE,
+                status="rejected",
+                meta={"reason": "no_real_quote_available", "source": signal.get("source", "patreon"), "note": note},
+            )
+            log.error("Skip trade: no real quote available for %s - refusing to size a real order off a fake price "
+                      "(not recording as seen - may be retried).", sym)
+            return False
+        ref_price = _dry_price(sym)  # dry mode only - no real order will be submitted
+
     dollars = (float(amt) if amt is not None else float(os.getenv("DEFAULT_TRADE_DOLLARS", "500"))) * POSITION_SIZE_SCALE
     qty = max(1.0, round(dollars / max(0.01, ref_price), 0))
 
     meta = {"source": signal.get("source", "patreon"), "confidence": conf, "note": note}
+
+    # Reduce-only: a sell must never exceed (or exist without) an actual
+    # held position. qty up to here is sized purely from the configured
+    # dollar amount - with nothing checked against what's actually held, a
+    # sell signal for more shares than owned (or for a symbol with no
+    # position at all) opened a real short by accident. Checked against the
+    # broker's own position, not this bot's local bookkeeping, so this is
+    # right even if the DB's view of what's held has ever drifted.
+    if side == "sell" and TRADE_MODE in ("paper", "live"):
+        try:
+            broker_pos = broker_get_position(sym)
+        except Exception as e:
+            store.submit_order(
+                symbol=sym, side=side, qty=0, order_type="market", tif="day", venue=TRADE_MODE,
+                status="rejected", meta={"reason": f"position_check_failed: {e}", **meta},
+            )
+            log.error("Skip trade: SELL %s but couldn't verify held position (%s) - refusing to risk a short "
+                      "(not recording as seen - may be retried).", sym, e)
+            return False
+        held_qty = float(broker_pos.get("qty", 0)) if broker_pos else 0.0
+        if held_qty <= 0:
+            store.submit_order(
+                symbol=sym, side=side, qty=0, order_type="market", tif="day", venue=TRADE_MODE,
+                status="rejected", meta={"reason": "reduce_only_no_position_held", **meta},
+            )
+            log.warning("Skip trade: SELL %s but nothing held (qty=%.2f) - refusing to open a short.", sym, held_qty)
+            return True
+        if qty > held_qty:
+            log.info("Capping SELL %s qty %.0f -> %.0f (reduce-only - only %.0f held)", sym, qty, held_qty, held_qty)
+            qty = held_qty
 
     # Only bracket new long entries. A "sell" here is closing/shorting, not
     # opening a position, so there's nothing to attach a bracket exit to.
@@ -407,7 +493,7 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
                 meta={"reason": corr_reason, **meta},
             )
             log.error("Skip trade: %s", corr_reason)
-            return
+            return True
 
         pdt_ok, pdt_reason = check_pdt_ok(store)
         if not pdt_ok:
@@ -417,7 +503,7 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
                 meta={"reason": pdt_reason, **meta},
             )
             log.error("Skip trade: %s", pdt_reason)
-            return
+            return True
 
     log.info("🔔 signal → %s %s (qty=%.0f, conf=%.2f, mode=%s, ref=%.2f, tp=%s, sl=%s, her_target=%s, her_stop=%s)",
              side.upper(), sym, qty, conf, TRADE_MODE, ref_price, take_profit, stop_loss, target_hint, stop_hint)
@@ -451,6 +537,14 @@ def _execute_equity_trade(signal: Dict[str, Any]) -> None:
                 order_id=out["order_id"], symbol=sym, qty=qty,
                 entry_price=entry_price, leg_ids=leg_ids, venue=TRADE_MODE,
             )
+
+    # A broker-side failure inside place_trade (unreachable, request error)
+    # is the same kind of retryable technical failure as the checks above -
+    # don't record this signal as seen just because the attempt happened.
+    reason = str(out.get("reason", ""))
+    if out.get("status") == "rejected" and (reason.startswith("broker_error") or reason == "broker_unavailable"):
+        return False
+    return True
 
 def main():
     log.info("Trade handler ready (mode=%s, floor=%.2f).", TRADE_MODE, )

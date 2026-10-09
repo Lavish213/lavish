@@ -50,6 +50,7 @@ try:
         get_position as broker_position,
         place_order as broker_place_order,
         get_order as broker_get_order,
+        get_order_by_client_id as broker_get_order_by_client_id,
     )
     HAS_ALPACA = True
 except Exception:
@@ -233,6 +234,11 @@ def would_violate_limits(
 # ───────────────────────────────────────────────────────────────
 
 def _with_retries(fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
+    """Retries a broker call that carries no client_order_id to look up
+    (e.g. a GET). For order *submission*, use _submit_with_retries instead -
+    a bare retry-on-exception here can't tell "the POST timed out before
+    reaching Alpaca" from "the POST succeeded and only the response was
+    lost", and blindly resubmitting risks a real duplicate order."""
     last_err: Optional[Exception] = None
     for attempt in range(RETRY_MAX + 1):
         try:
@@ -242,6 +248,40 @@ def _with_retries(fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
             sleep_s = RETRY_BASE * (2 ** attempt)
             LOG.warning("Broker call failed (attempt %d/%d): %s. Sleeping %.2fs",
                         attempt + 1, RETRY_MAX + 1, e, sleep_s)
+            time.sleep(sleep_s)
+    raise RuntimeError(f"Broker retries exhausted: {last_err}")
+
+
+def _submit_with_retries(submit_fn: Callable[[], Dict[str, Any]], client_order_id: str) -> Dict[str, Any]:
+    """
+    Order submission's own retry wrapper. The gap a bare retry-on-exception
+    leaves open: a POST that times out or drops its response after the
+    order actually reached Alpaca either opens a second real position (if
+    Alpaca somehow accepted a resubmit) or gets rejected as a duplicate
+    client_order_id and - with nothing to distinguish that from any other
+    failure - eventually gives up and marks the trade "rejected" locally
+    even though a real order exists at the broker. Before every retry,
+    this checks whether client_order_id already resolves to a real order
+    first; only submits again if it genuinely doesn't exist yet.
+    """
+    last_err: Optional[Exception] = None
+    for attempt in range(RETRY_MAX + 1):
+        try:
+            return submit_fn()
+        except Exception as e:
+            last_err = e
+            LOG.warning("Order submission failed (attempt %d/%d): %s", attempt + 1, RETRY_MAX + 1, e)
+            try:
+                existing = broker_get_order_by_client_id(client_order_id)
+                if existing:
+                    LOG.warning(
+                        "Found an existing order %s for client_order_id=%s after a failed submit - "
+                        "using it instead of resubmitting.", existing.get("id"), client_order_id,
+                    )
+                    return existing
+            except Exception as lookup_err:
+                LOG.warning("client_order_id lookup also failed: %s", lookup_err)
+            sleep_s = RETRY_BASE * (2 ** attempt)
             time.sleep(sleep_s)
     raise RuntimeError(f"Broker retries exhausted: {last_err}")
 
@@ -454,7 +494,7 @@ def place_trade(
             )
 
         try:
-            broker_resp = _with_retries(_submit)
+            broker_resp = _submit_with_retries(_submit, client_id)
             broker_oid = broker_resp.get("id")
             client_ord_id = client_id or broker_resp.get("client_order_id")
 

@@ -1,6 +1,7 @@
 # lavish_core/patreon/trigger.py
 from __future__ import annotations
 import os, time, json, re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 import requests
@@ -8,6 +9,7 @@ import requests
 from lavish_core.logger_setup import get_logger
 from lavish_core.trading.alert_handler import handle_alert_text
 from lavish_core.patreon.patreon_refresh import refresh_patreon_token
+from lavish_core.db.hybrid_store import HybridStore, DEFAULT_DB
 
 ROOT = Path(__file__).resolve().parents[1]
 VISION_RAW = ROOT / "vision" / "raw"
@@ -22,6 +24,15 @@ ACCESS   = os.getenv("PATREON_ACCESS_TOKEN", "")
 CAMPAIGN = os.getenv("PATREON_CAMPAIGN_ID", "")
 POLL_SECONDS = int(os.getenv("PATREON_POLL_SECONDS", "20"))
 VISION_AUTO  = os.getenv("VISION_AUTO", "true").strip().lower() in ("1","true","yes","on")
+
+# A post older than this when first seen is stale enough that acting on it
+# isn't "copying a fresh alert" anymore (e.g. the bot was down and this is
+# catching up on a backlog) - skip trading it, but still mark it seen so
+# it isn't retried forever. Generous default since Patreon's own feed can
+# lag; tightened per-deployment if latency is confirmed better than this.
+MAX_ALERT_AGE_SECONDS = int(os.getenv("PATREON_MAX_ALERT_AGE_SECONDS", "900"))
+
+_INGEST_SOURCE = "patreon"
 
 def _headers(tok: Optional[str]=None) -> Dict[str, str]:
     return {"Authorization": f"Bearer {tok or ACCESS}"}
@@ -66,6 +77,17 @@ def _download_images_from_post(post: Dict[str, Any]) -> List[Path]:
             log.error("img_download_error: %s : %s", url, e)
     return saved
 
+def _post_age_seconds(post: Dict[str, Any]) -> Optional[float]:
+    created_at = (post.get("attributes") or {}).get("created_at")
+    if not created_at:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - dt).total_seconds()
+    except Exception:
+        return None
+
+
 def _handle_post(post: Dict[str, Any]) -> None:
     attrs = post.get("attributes", {})
     title = attrs.get("title", "") or ""
@@ -98,7 +120,19 @@ def poll_loop():
     cid = _ensure_campaign_id()
     log.info(f"📬 Patreon listening (campaign={cid}) — poll={POLL_SECONDS}s vision_auto={VISION_AUTO}")
 
-    seen: set[str] = set()
+    # Durable cursor (HybridStore) instead of an in-memory set - a restart
+    # used to reset "seen" to empty, so the next poll's most recent posts
+    # all looked brand new and got traded as if they just happened.
+    store = HybridStore(duckdb_path=str(DEFAULT_DB))
+    seen: set[str] = store.get_all_ingest_seen(_INGEST_SOURCE)
+    first_run_seed = not seen
+    if first_run_seed:
+        log.warning(
+            "Patreon ingest cursor is empty (first run, or a fresh DB) - the first batch of posts "
+            "fetched will be marked seen WITHOUT trading them, so this doesn't replay her entire "
+            "recent history as if every post just happened."
+        )
+
     base = f"{API}/campaigns/{cid}/posts?fields[post]=title,content,created_at,post_type&page[count]=10&sort=-created"
 
     # A periodic "still alive" line so someone tailing logs can tell "quietly
@@ -128,7 +162,19 @@ def poll_loop():
                     if not pid or pid in seen:
                         continue
                     seen.add(pid)
+                    store.mark_ingest_seen(_INGEST_SOURCE, pid)
+
+                    if first_run_seed:
+                        continue  # cursor-seeding batch - mark seen, don't trade
+
+                    age = _post_age_seconds(post)
+                    if age is not None and age > MAX_ALERT_AGE_SECONDS:
+                        log.warning("Skipping stale Patreon post %s (%.0fs old, > %ds max) - not trading it.",
+                                     pid, age, MAX_ALERT_AGE_SECONDS)
+                        continue
+
                     _handle_post(post)
+                first_run_seed = False  # only the very first successful poll is the seed batch
         except Exception as e:
             log.error("patreon_poll_error: %s", e)
         time.sleep(POLL_SECONDS)
