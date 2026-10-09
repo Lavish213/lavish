@@ -1,0 +1,51 @@
+name: Simulate ticker watch (real market data)
+
+# Manual-only. GitHub-hosted runners have normal internet access, unlike
+# the sandbox this was developed in (confirmed policy-blocked from Yahoo
+# Finance there) - this is how simulate_ticker_watch.py gets run with
+# real historical price data instead of "no data" placeholders.
+on:
+  workflow_dispatch:
+    inputs:
+      alerts_per_ticker:
+        description: "Synthetic alerts generated per ticker"
+        default: "25"
+      days:
+        description: "Simulated window size in days, trailing from today"
+        default: "365"
+      seed:
+        description: "RNG seed (reproducible generation)"
+        default: "42"
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements-deploy.txt
+
+      - name: Run simulation
+        run: |
+          python3 simulate_ticker_watch.py \
+            --alerts-per-ticker "${{ github.event.inputs.alerts_per_ticker }}" \
+            --days "${{ github.event.inputs.days }}" \
+            --seed "${{ github.event.inputs.seed }}" \
+            | tee simulation_output.txt
+
+      - name: Write job summary
+        run: |
+          echo '## Simulation output' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat simulation_output.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: simulation-output
+          path: simulation_output.txt
