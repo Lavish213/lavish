@@ -109,6 +109,15 @@ class SyntheticAlert:
     date: date
     text: str
     designed_kind: str  # "equity_buy" | "equity_sell" | "options" | "ambiguous"
+    # The expiry this alert was GENERATED with (options alerts only). The
+    # real parser (correctly, for live use - a real alert always arrives
+    # "now") resolves bare "10/24"-style text against the CURRENT real
+    # calendar year, which breaks when replayed against a synthetic date
+    # in the past: an alert dated 2025-10-20 saying "exp 10/24" gets
+    # reparsed as 2026-10-24, a year of bogus theoretical time value.
+    # Downstream Black-Scholes estimates must use THIS field, not
+    # whatever the real parser re-derives, to stay a true weekly hold.
+    intended_expiry: Optional[date] = None
 
 
 def _build_price_lookups(tickers: list[str], start: date, end: date) -> dict:
@@ -167,6 +176,8 @@ def generate_synthetic_alerts(tickers: list[str], start: date, end: date,
                     t=t, strike=int(strike), side_word=side_word, side_letter=side_letter,
                     target=int(target), stop=int(stop), exp=f"{exp.month}/{exp.day}",
                 )
+                out.append(SyntheticAlert(ticker=t, date=d, text=text, designed_kind=kind, intended_expiry=exp))
+                continue
             else:
                 text = rng.choice(AMBIGUOUS_TEMPLATES).format(t=t)
             out.append(SyntheticAlert(ticker=t, date=d, text=text, designed_kind=kind))
@@ -288,10 +299,17 @@ def main() -> None:
         if r["outcome"] != "trade:options" or shown >= 5:
             continue
         try:
-            expiry = date.fromisoformat(r["expiry"])
+            # a.intended_expiry (the date this alert was GENERATED with),
+            # not r["expiry"] (what the real parser re-derives) - the
+            # parser correctly anchors bare "10/24"-style text to the
+            # CURRENT real year for live use, which silently turns a
+            # synthetic alert dated in the past into a year-plus "weekly"
+            # option here. Confirmed via a real GitHub Actions run before
+            # this fix: a 2025-10-20 entry showed "exp 2026-10-24".
+            expiry = a.intended_expiry or date.fromisoformat(r["expiry"])
             dte = max(1, (expiry - a.date).days)
             est = estimate_option_pnl(
-                ticker=r["ticker"], dte_days=dte, entry_date=a.date,
+                ticker=r["ticker"], dte_days=dte, entry_date=a.date, exit_date=expiry,
                 strike=r["strike"], option_type=r["side"].lower(),
             )
             if est:

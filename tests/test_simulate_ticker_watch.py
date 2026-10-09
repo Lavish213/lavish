@@ -60,6 +60,26 @@ def test_options_strikes_are_anchored_near_reference_price():
         )
 
 
+def test_options_alerts_carry_a_short_intended_expiry():
+    # Regression test for a bug found via a real GitHub Actions run: an
+    # alert dated 2025-10-20 saying "exp 10/24" printed as expiring
+    # 2026-10-24 downstream, because the real parser (correctly, for a
+    # real live alert) anchors bare "10/24" text to the CURRENT real
+    # year - which silently turns a synthetic past-dated alert into a
+    # year-plus theoretical hold instead of the intended ~1-7 day weekly
+    # option. intended_expiry must stay close to the alert's own date
+    # regardless of what the real parser re-derives from the text.
+    end = date(2026, 10, 9)
+    start = end - timedelta(days=365)
+    alerts = generate_synthetic_alerts(TOP_TICKERS, start, end, 15, random.Random(3), price_lookups=_NO_NETWORK)
+    options_alerts = [a for a in alerts if a.designed_kind == "options"]
+    assert options_alerts, "expected at least one options alert in this sample"
+    for a in options_alerts:
+        assert a.intended_expiry is not None
+        gap = (a.intended_expiry - a.date).days
+        assert 0 < gap <= 7, f"{a.ticker} @ {a.date}: intended_expiry {a.intended_expiry} is {gap}d out"
+
+
 def test_classify_and_route_recognizes_clear_options_alert():
     from simulate_ticker_watch import SyntheticAlert
     a = SyntheticAlert(ticker="AAPL", date=date.today(), text="AAPL $190 calls target 200 stop 180 exp 10/9",
